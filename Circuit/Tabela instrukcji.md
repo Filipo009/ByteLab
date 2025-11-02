@@ -1,6 +1,6 @@
 ## Tabela instrukcji
 
-| Instrukcja | Rejestr Danych | Rejestr Docelowy | Przykład        |
+| Instrukcja | Dane           | Miejsce Docelowe | Przykład        |
 |------------|----------------|------------------|-----------------|
 | ADD        | ---            | REG A - REG D    | A + B           |
 | SUB        | ---            | REG A - REG D    | A - B           |
@@ -10,8 +10,7 @@
 | MOV        | REG A - REG D  | REG A - REG D    | REG X  -> REG Y |
 | IN         | INPUT          | REG A - REG D    | INPUT  -> REG Y |
 | OUT        | REG A - REG D  | ---              | OUTPUT -> REG Y |
-| LOAD       | ---            | REG A - REG D    | RAM    -> REG Y |
-| STORE      | REG A - REG D  | ---              | REG X  -> RAM   |
+| JUMP       | ---            | ADRES            | Skok do adresu  |
 | NOP        | ---            | ---              | No Operation    |
 
 INPUT = Dane wprowadzone przez użytkownika
