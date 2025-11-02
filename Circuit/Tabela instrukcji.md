@@ -12,3 +12,4 @@
 | OUT        | REG A - REG D  | ---              | OUTPUT -> REG Y |
 | LOAD       | ---            | REG A - REG D    | RAM    -> REG Y |
 | STORE      | REG A - REG D  | ---              | REG X  -> RAM   |
+| NOP        | ---            | ---              | No Operation    |
