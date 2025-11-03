@@ -300,7 +300,7 @@ public class CommandSearchView extends VBox {
                 inputField.clear();
                 inputField.setPromptText("Instrukcja gotowa! Wciśnij Zatwierdź lub Enter");
                 submitButton.setDisable(false);
-                // Jeśli target był placeholderem 'WPROWADŹ ADRES', użytkownik musi wpisać w pole i nacisnąć Enter (obsługiwane w handlerze input)
+                // Jeśli target był placeholderem 'WPROWADŹ ADRES', użytkownik musi wpisać w pole i nacisnąć Enter
             }
         }
     }
