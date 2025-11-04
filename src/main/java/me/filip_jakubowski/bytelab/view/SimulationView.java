@@ -1,5 +1,6 @@
 package me.filip_jakubowski.bytelab.view;
 
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
@@ -20,7 +21,7 @@ public class SimulationView extends VBox {
     private final Label regCLabel = new Label();
     private final Label regDLabel = new Label();
     private final Label outLabel = new Label();
-    private final Label zeroFlagLabel = new Label();
+    private final Label zeroLabel = new Label();
 
     private final Button runButton = new Button("RUN");
     private final Button stopButton = new Button("STOP");
@@ -54,7 +55,7 @@ public class SimulationView extends VBox {
         registers.put("C", 0);
         registers.put("D", 0);
         registers.put("OUT", 0);
-        registers.put("ZF", 0); // flaga zero
+        registers.put("ZERO", 0);
     }
 
     private GridPane createRegisterGrid() {
@@ -68,7 +69,7 @@ public class SimulationView extends VBox {
         grid.addRow(2, new Label("REG C:"), regCLabel);
         grid.addRow(3, new Label("REG D:"), regDLabel);
         grid.addRow(4, new Label("OUT:"), outLabel);
-        grid.addRow(5, new Label("Flaga Zero:"), zeroFlagLabel);
+        grid.addRow(5, new Label("Flaga Zero:"), zeroLabel);
 
         return grid;
     }
@@ -123,11 +124,17 @@ public class SimulationView extends VBox {
 
     private void reset() {
         if (timeline != null) timeline.stop();
+
         currentInstructionIndex = 0;
         initRegisters();
         updateDisplay();
         highlightCurrent();
+
+        // ustaw przyciski: RUN aktywny, STOP nieaktywny
+        runButton.setDisable(false);
+        stopButton.setDisable(true);
     }
+
 
     private void step() {
         if (historyListView == null || historyListView.getItems().isEmpty()) return;
@@ -152,6 +159,23 @@ public class SimulationView extends VBox {
 
         if (!jumpedLastInstruction) currentInstructionIndex++;
     }
+
+
+    // ======== Pomocnicze funkcje parsujące ========
+    private List<String> findRegistersInArgs(String[] args) {
+        List<String> regs = new java.util.ArrayList<>();
+        for (String a : args) {
+            a = a.replace(",", "").trim().toUpperCase();
+            if (a.startsWith("REG")) {
+                a = a.replace("REG", "").trim();
+            }
+            if (registers.containsKey(a)) {
+                regs.add(a);
+            }
+        }
+        return regs;
+    }
+
 
     // ======== Logika instrukcji ========
     private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "NOP"};
@@ -189,41 +213,61 @@ public class SimulationView extends VBox {
             case "NOP" -> {}
         }
 
+        if (List.of("ADD", "SUB", "AND", "OR", "NOT").contains(cmd)) {
+            int outVal = registers.getOrDefault("OUT", 0);
+            registers.put("ZERO", (outVal == 0) ? 1 : 0);
+        }
+
         updateZeroFlag();
         updateDisplay();
     }
 
     private void mov(String[] args) {
-        if (args.length < 2) return;
-        String from = findRegisterToken(args, 0);
-        String to = findRegisterToken(args, 1);
-        if (from == null || to == null) return;
-        String f = from.replace("REG", "").trim();
-        String t = to.replace("REG", "").trim();
-        if (registers.containsKey(f) && registers.containsKey(t)) {
-            registers.put(t, registers.get(f));
+        // Wyciągnij wszystkie rejestry występujące w argumentach (np. ["C","D"])
+        List<String> regs = findRegistersInArgs(args);
+        if (regs.size() < 2) return;
+
+        String src = regs.get(0); // pierwszy znaleziony rejestr = źródło
+        String dst = regs.get(1); // drugi znaleziony rejestr = cel
+
+        // Kopiuj wartość z src do dst
+        if (registers.containsKey(src) && registers.containsKey(dst)) {
+            registers.put(dst, registers.get(src) & 0xFFFF);
         }
     }
+
+
+
 
     private void in(String[] args) {
         if (args.length < 2) return;
 
-        String hexToken = null;
+        String valueToken = null;
         String regToken = null;
 
         for (String a : args) {
-            if (a.matches("(?i)(0x)?[0-9A-F]+")) hexToken = a;
-            if (a.toUpperCase().startsWith("REG") || a.matches("^[ABCD]$")) regToken = a;
+            // szukamy pierwszego tokena, który wygląda na wartość liczbową (HEX lub dziesiętną)
+            if (valueToken == null && a.matches("(?i)^(0x)?[0-9A-F]+$")) {
+                valueToken = a;
+                continue;
+            }
+            // szukamy rejestru docelowego
+            if (a.toUpperCase().startsWith("REG") || a.matches("^[ABCD]$")) {
+                regToken = a;
+            }
         }
 
-        if (hexToken == null || regToken == null) return;
+        if (valueToken == null || regToken == null) return;
 
         try {
-            int val = Integer.parseInt(hexToken.replaceFirst("(?i)0x", ""), 16) & 0xFFFF;
-            String reg = regToken.replace("REG", "").trim();
-            if (registers.containsKey(reg)) registers.put(reg, val);
+            int val = Integer.parseInt(valueToken.replaceFirst("(?i)0x", ""), 16) & 0xFFFF;
+            String reg = regToken.replace("REG", "").trim().toUpperCase();
+            if (registers.containsKey(reg)) {
+                registers.put(reg, val);
+            }
         } catch (NumberFormatException ignored) {}
     }
+
 
     private void out(String[] args) {
         if (args.length < 1) return;
@@ -284,7 +328,8 @@ public class SimulationView extends VBox {
         regCLabel.setText(fmt(registers.get("C")));
         regDLabel.setText(fmt(registers.get("D")));
         outLabel.setText(fmt(registers.get("OUT")));
-        zeroFlagLabel.setText(String.valueOf(registers.get("ZF")));
+        zeroLabel.setText(String.valueOf(registers.getOrDefault("ZERO", 0)));
+
     }
 
     private String fmt(int val) {
