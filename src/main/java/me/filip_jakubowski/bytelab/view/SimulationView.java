@@ -201,17 +201,19 @@ public class SimulationView extends VBox {
         String[] args = (cmdIdx + 1 < p.length) ? Arrays.copyOfRange(p, cmdIdx + 1, p.length) : new String[0];
 
         switch (cmd) {
-            case "ADD" -> registers.put("OUT", registers.get("A") + registers.get("B"));
-            case "SUB" -> registers.put("OUT", registers.get("A") - registers.get("B"));
-            case "AND" -> registers.put("OUT", registers.get("A") & registers.get("B"));
-            case "OR"  -> registers.put("OUT", registers.get("A") | registers.get("B"));
-            case "NOT" -> registers.put("OUT", ~registers.get("A") & 0xFFFF);
+            case "ADD" -> aluOp(args, (a, b) -> a + b);
+            case "SUB" -> aluOp(args, (a, b) -> a - b);
+            case "AND" -> aluOp(args, (a, b) -> a & b);
+            case "OR"  -> aluOp(args, (a, b) -> a | b);
+            case "XOR" -> aluOp(args, (a, b) -> a ^ b);
+            case "NOT" -> notOp(args);
             case "MOV" -> mov(args);
             case "IN"  -> in(args);
             case "OUT" -> out(args);
             case "JUMP"-> jump(args);
             case "NOP" -> {}
         }
+
 
         if (List.of("ADD", "SUB", "AND", "OR", "NOT").contains(cmd)) {
             int outVal = registers.getOrDefault("OUT", 0);
@@ -221,6 +223,47 @@ public class SimulationView extends VBox {
         updateZeroFlag();
         updateDisplay();
     }
+
+    private interface AluFunction {
+        int apply(int a, int b);
+    }
+
+    private void aluOp(String[] args, AluFunction op) {
+        int a = registers.getOrDefault("A", 0);
+        int b = registers.getOrDefault("B", 0);
+
+        // wynik operacji
+        int result = op.apply(a, b) & 0xFFFF;
+
+        // jeśli podano rejestr docelowy (np. REG D), zapisz wynik tam
+        List<String> regs = findRegistersInArgs(args);
+        if (!regs.isEmpty()) {
+            String dst = regs.get(0); // np. "D"
+            if (registers.containsKey(dst)) {
+                registers.put(dst, result);
+            }
+        }
+
+        // ustaw flagę ZERO
+        registers.put("ZERO", (result == 0) ? 1 : 0);
+    }
+
+    private void notOp(String[] args) {
+        int a = registers.getOrDefault("A", 0);
+        int result = (~a) & 0xFFFF;
+
+        List<String> regs = findRegistersInArgs(args);
+        if (!regs.isEmpty()) {
+            String dst = regs.get(0);
+            if (registers.containsKey(dst)) {
+                registers.put(dst, result);
+            }
+        }
+
+        registers.put("ZERO", (result == 0) ? 1 : 0);
+    }
+
+
 
     private void mov(String[] args) {
         // Wyciągnij wszystkie rejestry występujące w argumentach (np. ["C","D"])
