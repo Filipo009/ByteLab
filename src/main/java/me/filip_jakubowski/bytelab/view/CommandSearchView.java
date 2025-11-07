@@ -13,7 +13,7 @@ import java.util.*;
 public class CommandSearchView extends VBox {
 
     private final List<String> instructions = List.of(
-            "ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "NOP"
+            "ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"
     );
 
     private final Map<String, List<String>> dataRegisters = new HashMap<>();
@@ -63,7 +63,7 @@ public class CommandSearchView extends VBox {
                 case "NOT", "MOV", "OUT" -> dataRegisters.put(instr, List.of("REG A", "REG B", "REG C", "REG D"));
                 case "NOP" -> dataRegisters.put(instr, List.of("-----"));
                 case "IN" -> dataRegisters.put(instr, List.of("WPROWADŹ HEX"));
-                case "JUMP" -> dataRegisters.put(instr, List.of("-----"));
+                case "JUMP", "JZ" -> dataRegisters.put(instr, List.of("-----"));
                 default -> dataRegisters.put(instr, List.of("-----"));
             }
         }
@@ -76,7 +76,7 @@ public class CommandSearchView extends VBox {
                 case "OUT", "NOP":
                     targetRegisters.put(instr, List.of("-----"));
                     break;
-                case "JUMP":
+                case "JUMP", "JZ":
                     targetRegisters.put(instr, List.of("WPROWADŹ ADRES"));
                     break;
             }
@@ -125,7 +125,7 @@ public class CommandSearchView extends VBox {
                     String selTarget = suggestionsList.getSelectionModel().getSelectedItem();
                     if (selTarget != null && !selTarget.isEmpty()) {
                         if ("WPROWADŹ ADRES".equals(selTarget) || "WPROWADŹ HEX".equals(selTarget) || "-----".equals(selTarget)) {
-                            if ("JUMP".equals(selectedInstruction)) {
+                            if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
                                 String addr = inputField.getText().trim();
                                 if (validateHex(addr)) {
                                     selectedTarget = addr.toUpperCase();
@@ -147,7 +147,7 @@ public class CommandSearchView extends VBox {
                             return;
                         }
                     } else {
-                        if ("JUMP".equals(selectedInstruction)) {
+                        if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
                             String addr = inputField.getText().trim();
                             if (validateHex(addr)) {
                                 selectedTarget = addr.toUpperCase();
@@ -184,7 +184,9 @@ public class CommandSearchView extends VBox {
             ObservableList<String> items = completedCommands.getItems();
             if (!items.isEmpty()) {
                 items.remove(items.size() - 1);
-                if (commandCounter > 0) commandCounter--;
+                // after removal reindex everything and update counter
+                reindexCompletedCommands();
+                commandCounter = completedCommands.getItems().size();
             }
         });
 
@@ -192,6 +194,8 @@ public class CommandSearchView extends VBox {
             int index = completedCommands.getSelectionModel().getSelectedIndex();
             if (index >= 0) {
                 completedCommands.getItems().remove(index);
+                reindexCompletedCommands();
+                commandCounter = completedCommands.getItems().size();
             }
         });
     }
@@ -233,7 +237,7 @@ public class CommandSearchView extends VBox {
                     return;
                 }
 
-                if (selectedInstruction.equals("JUMP")) {
+                if (selectedInstruction.equals("JUMP") || selectedInstruction.equals("JZ")) {
                     selectedData = "-----";
                     currentStage = Stage.TARGET;
                     inputField.clear();
@@ -255,7 +259,7 @@ public class CommandSearchView extends VBox {
                 }
                 currentStage = Stage.TARGET;
                 inputField.clear();
-                inputField.setPromptText("Wybierz rejestr docelowy lub wpisz adres (dla JUMP) i naciśnij Enter");
+                inputField.setPromptText("Wybierz rejestr docelowy lub wpisz adres (dla JUMP/JZ) i naciśnij Enter");
                 suggestionsList.setItems(FXCollections.observableArrayList(
                         targetRegisters.getOrDefault(selectedInstruction, List.of("-----"))));
                 suggestionsList.getSelectionModel().selectFirst();
@@ -276,7 +280,7 @@ public class CommandSearchView extends VBox {
             if (selectedData == null || selectedData.isEmpty()) return;
         } else if (selectedData == null) return;
 
-        if ("JUMP".equals(selectedInstruction)) {
+        if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
             if (selectedTarget == null || selectedTarget.isEmpty()) return;
         } else if (selectedTarget == null) return;
 
@@ -286,6 +290,39 @@ public class CommandSearchView extends VBox {
         completedCommands.scrollTo(completedCommands.getItems().size() - 1);
 
         clearSelection();
+    }
+
+    /**
+     * Reindexuje wpisy w completedCommands tak, aby prefiks adresu (0xNNNN) był kolejnym indeksem od 0.
+     * Zachowuje treść instrukcji po separatorze ": ".
+     */
+    private void reindexCompletedCommands() {
+        ObservableList<String> items = completedCommands.getItems();
+        if (items.isEmpty()) return;
+
+        List<String> newItems = new ArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            String line = items.get(i);
+            String after;
+            int colon = line.indexOf(":");
+            if (colon >= 0 && colon + 2 < line.length()) {
+                // zachowaj wszystko po ": " (jeśli obecne)
+                after = line.substring(Math.min(colon + 2, line.length()));
+            } else {
+                // jeśli format nieznany, użyj całej linii (bez numeru)
+                // albo w najgorszym wypadku traktuj jako całość
+                // spróbuj usunąć ewentualny prefiks do pierwszego spacji
+                int firstSpace = line.indexOf(' ');
+                if (firstSpace >= 0 && firstSpace + 1 < line.length()) {
+                    after = line.substring(firstSpace + 1);
+                } else {
+                    after = line;
+                }
+            }
+            String newLine = String.format("0x%04X: %s", i, after);
+            newItems.add(newLine);
+        }
+        items.setAll(newItems);
     }
 
     private void clearSelection() {

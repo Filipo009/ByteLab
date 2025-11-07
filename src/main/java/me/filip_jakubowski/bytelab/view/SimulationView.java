@@ -186,7 +186,7 @@ public class SimulationView extends VBox {
 
     // ======== Logika instrukcji ========
 
-    private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "NOP"};
+    private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"};
 
     private void execute(String line) {
         if (line == null || line.isBlank()) return;
@@ -219,11 +219,11 @@ public class SimulationView extends VBox {
             case "IN"  -> in(args);
             case "OUT" -> out(args);
             case "JUMP"-> jump(args);
+            case "JZ"  -> jumpIfZero(args);
             case "NOP" -> {}
         }
 
         if (List.of("ADD", "SUB", "AND", "OR", "XOR", "NOT").contains(cmd)) {
-            // pobierz ostatni wynik operacji z rejestru docelowego (np. A, B, C, D)
             List<String> regs = findRegistersInArgs(args);
             if (!regs.isEmpty()) {
                 String dst = regs.get(0);
@@ -312,28 +312,47 @@ public class SimulationView extends VBox {
 
     private void out(String[] args) {
         if (args.length == 0) return;
-
-        // Znajdź pierwszy rejestr w argumentach (np. REG A, A)
         List<String> regs = findRegistersInArgs(args);
         if (regs.isEmpty()) return;
 
-        String src = regs.get(0); // np. "A"
-
-        // Jeśli rejestr istnieje — przepisz jego wartość do OUT
+        String src = regs.get(0);
         if (registers.containsKey(src)) {
             int val = registers.get(src) & 0xFFFF;
             registers.put("OUT", val);
         }
 
-        // Uaktualnij flagę ZERO po operacji OUT
         int outVal = registers.get("OUT");
         registers.put("ZERO", (outVal == 0) ? 1 : 0);
     }
 
-
     private void jump(String[] args) {
         jumpedLastInstruction = false;
-        if (args.length < 1) {
+        if (args.length < 1) return;
+
+        String candidate = null;
+        for (String a : args) {
+            String cleaned = a.replaceAll("[^0-9A-Fa-f]", "");
+            if (!cleaned.isEmpty()) {
+                candidate = cleaned;
+                break;
+            }
+        }
+
+        if (candidate == null) return;
+
+        try {
+            int target = Integer.parseInt(candidate, 16);
+            registers.put("PC", target & 0xFFFF);
+            jumpedLastInstruction = true;
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private void jumpIfZero(String[] args) {
+        jumpedLastInstruction = false;
+        if (args.length < 1) return;
+
+        if (registers.getOrDefault("ZERO", 0) != 1) {
+            jumpedLastInstruction = false;
             return;
         }
 
@@ -346,26 +365,13 @@ public class SimulationView extends VBox {
             }
         }
 
-        if (candidate == null) { return;
-
-        }
+        if (candidate == null) return;
 
         try {
             int target = Integer.parseInt(candidate, 16);
             registers.put("PC", target & 0xFFFF);
             jumpedLastInstruction = true;
-        } catch (NumberFormatException ex) {
-        }
-    }
-
-    private String findRegisterToken(String[] args, int startIndex) {
-        for (int i = startIndex; i < args.length; i++) {
-            String t = args[i].toUpperCase();
-            if (t.startsWith("REG")) return args[i];
-            if (t.matches("^[ABCD]$")) return "REG" + args[i];
-            if (t.matches("REG[A-D]")) return args[i];
-        }
-        return null;
+        } catch (NumberFormatException ignored) {}
     }
 
     private void updateDisplay() {
