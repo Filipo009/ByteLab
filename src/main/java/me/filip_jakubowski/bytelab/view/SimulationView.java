@@ -21,6 +21,7 @@ public class SimulationView extends VBox {
     private final Label regCLabel = new Label();
     private final Label regDLabel = new Label();
     private final Label outLabel = new Label();
+    private final Label pcLabel = new Label();
     private final Label zeroLabel = new Label();
 
     private final Button runButton = new Button("RUN");
@@ -31,7 +32,6 @@ public class SimulationView extends VBox {
 
     private ListView<String> historyListView;
     private Timeline timeline;
-    private int currentInstructionIndex = 0;
     private boolean jumpedLastInstruction = false;
 
     public SimulationView() {
@@ -55,6 +55,7 @@ public class SimulationView extends VBox {
         registers.put("C", 0);
         registers.put("D", 0);
         registers.put("OUT", 0);
+        registers.put("PC", 0);
         registers.put("ZERO", 0);
     }
 
@@ -69,7 +70,8 @@ public class SimulationView extends VBox {
         grid.addRow(2, new Label("REG C:"), regCLabel);
         grid.addRow(3, new Label("REG D:"), regDLabel);
         grid.addRow(4, new Label("OUT:"), outLabel);
-        grid.addRow(5, new Label("Flaga Zero:"), zeroLabel);
+        grid.addRow(5, new Label("PC:"), pcLabel);
+        grid.addRow(6, new Label("Flaga Zero:"), zeroLabel);
 
         return grid;
     }
@@ -104,6 +106,7 @@ public class SimulationView extends VBox {
     }
 
     // ======== Sterowanie ========
+
     private void start() {
         if (historyListView == null || historyListView.getItems().isEmpty()) return;
         if (timeline != null && timeline.getStatus() == Timeline.Status.RUNNING) return;
@@ -125,43 +128,48 @@ public class SimulationView extends VBox {
     private void reset() {
         if (timeline != null) timeline.stop();
 
-        currentInstructionIndex = 0;
         initRegisters();
+        registers.put("PC", 0);
         updateDisplay();
         highlightCurrent();
 
-        // ustaw przyciski: RUN aktywny, STOP nieaktywny
         runButton.setDisable(false);
         stopButton.setDisable(true);
     }
 
-
     private void step() {
         if (historyListView == null || historyListView.getItems().isEmpty()) return;
-        if (currentInstructionIndex >= historyListView.getItems().size()) return;
+        int pc = registers.getOrDefault("PC", 0);
+        if (pc >= historyListView.getItems().size()) return;
 
         jumpedLastInstruction = false;
-        execute(historyListView.getItems().get(currentInstructionIndex));
+        execute(historyListView.getItems().get(pc));
         highlightCurrent();
 
-        if (!jumpedLastInstruction) currentInstructionIndex++;
+        if (!jumpedLastInstruction) {
+            registers.put("PC", pc + 1);
+        }
     }
 
     private void next() {
-        if (currentInstructionIndex >= historyListView.getItems().size()) {
+        if (historyListView == null || historyListView.getItems().isEmpty()) return;
+        int pc = registers.getOrDefault("PC", 0);
+        if (pc >= historyListView.getItems().size()) {
             if (timeline != null) timeline.stop();
             return;
         }
 
         jumpedLastInstruction = false;
-        execute(historyListView.getItems().get(currentInstructionIndex));
+        execute(historyListView.getItems().get(pc));
         highlightCurrent();
 
-        if (!jumpedLastInstruction) currentInstructionIndex++;
+        if (!jumpedLastInstruction) {
+            registers.put("PC", pc + 1);
+        }
     }
 
+    // ======== Pomocnicze ========
 
-    // ======== Pomocnicze funkcje parsujące ========
     private List<String> findRegistersInArgs(String[] args) {
         List<String> regs = new java.util.ArrayList<>();
         for (String a : args) {
@@ -176,8 +184,8 @@ public class SimulationView extends VBox {
         return regs;
     }
 
-
     // ======== Logika instrukcji ========
+
     private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "NOP"};
 
     private void execute(String line) {
@@ -214,13 +222,16 @@ public class SimulationView extends VBox {
             case "NOP" -> {}
         }
 
-
-        if (List.of("ADD", "SUB", "AND", "OR", "NOT").contains(cmd)) {
-            int outVal = registers.getOrDefault("OUT", 0);
-            registers.put("ZERO", (outVal == 0) ? 1 : 0);
+        if (List.of("ADD", "SUB", "AND", "OR", "XOR", "NOT").contains(cmd)) {
+            // pobierz ostatni wynik operacji z rejestru docelowego (np. A, B, C, D)
+            List<String> regs = findRegistersInArgs(args);
+            if (!regs.isEmpty()) {
+                String dst = regs.get(0);
+                int val = registers.getOrDefault(dst, 0);
+                registers.put("ZERO", (val == 0) ? 1 : 0);
+            }
         }
 
-        updateZeroFlag();
         updateDisplay();
     }
 
@@ -232,19 +243,16 @@ public class SimulationView extends VBox {
         int a = registers.getOrDefault("A", 0);
         int b = registers.getOrDefault("B", 0);
 
-        // wynik operacji
         int result = op.apply(a, b) & 0xFFFF;
 
-        // jeśli podano rejestr docelowy (np. REG D), zapisz wynik tam
         List<String> regs = findRegistersInArgs(args);
         if (!regs.isEmpty()) {
-            String dst = regs.get(0); // np. "D"
+            String dst = regs.get(0);
             if (registers.containsKey(dst)) {
                 registers.put(dst, result);
             }
         }
 
-        // ustaw flagę ZERO
         registers.put("ZERO", (result == 0) ? 1 : 0);
     }
 
@@ -263,24 +271,17 @@ public class SimulationView extends VBox {
         registers.put("ZERO", (result == 0) ? 1 : 0);
     }
 
-
-
     private void mov(String[] args) {
-        // Wyciągnij wszystkie rejestry występujące w argumentach (np. ["C","D"])
         List<String> regs = findRegistersInArgs(args);
         if (regs.size() < 2) return;
 
-        String src = regs.get(0); // pierwszy znaleziony rejestr = źródło
-        String dst = regs.get(1); // drugi znaleziony rejestr = cel
+        String src = regs.get(0);
+        String dst = regs.get(1);
 
-        // Kopiuj wartość z src do dst
         if (registers.containsKey(src) && registers.containsKey(dst)) {
             registers.put(dst, registers.get(src) & 0xFFFF);
         }
     }
-
-
-
 
     private void in(String[] args) {
         if (args.length < 2) return;
@@ -289,12 +290,10 @@ public class SimulationView extends VBox {
         String regToken = null;
 
         for (String a : args) {
-            // szukamy pierwszego tokena, który wygląda na wartość liczbową (HEX lub dziesiętną)
             if (valueToken == null && a.matches("(?i)^(0x)?[0-9A-F]+$")) {
                 valueToken = a;
                 continue;
             }
-            // szukamy rejestru docelowego
             if (a.toUpperCase().startsWith("REG") || a.matches("^[ABCD]$")) {
                 regToken = a;
             }
@@ -311,21 +310,33 @@ public class SimulationView extends VBox {
         } catch (NumberFormatException ignored) {}
     }
 
-
     private void out(String[] args) {
-        if (args.length < 1) return;
-        String regToken = findRegisterToken(args, 0);
-        if (regToken == null) return;
-        String reg = regToken.replace("REG", "").trim();
-        if (registers.containsKey(reg)) registers.put("OUT", registers.get(reg));
+        if (args.length == 0) return;
+
+        // Znajdź pierwszy rejestr w argumentach (np. REG A, A)
+        List<String> regs = findRegistersInArgs(args);
+        if (regs.isEmpty()) return;
+
+        String src = regs.get(0); // np. "A"
+
+        // Jeśli rejestr istnieje — przepisz jego wartość do OUT
+        if (registers.containsKey(src)) {
+            int val = registers.get(src) & 0xFFFF;
+            registers.put("OUT", val);
+        }
+
+        // Uaktualnij flagę ZERO po operacji OUT
+        int outVal = registers.get("OUT");
+        registers.put("ZERO", (outVal == 0) ? 1 : 0);
     }
+
 
     private void jump(String[] args) {
         jumpedLastInstruction = false;
         if (args.length < 1) {
-            registers.put("OUT", 0xFFFF);
             return;
         }
+
         String candidate = null;
         for (String a : args) {
             String cleaned = a.replaceAll("[^0-9A-Fa-f]", "");
@@ -334,19 +345,16 @@ public class SimulationView extends VBox {
                 break;
             }
         }
-        if (candidate == null) {
-            registers.put("OUT", 0xFFFF);
-            return;
+
+        if (candidate == null) { return;
+
         }
+
         try {
             int target = Integer.parseInt(candidate, 16);
-            registers.put("OUT", target & 0xFFFF);
-            if (historyListView != null && target >= 0 && target < historyListView.getItems().size()) {
-                currentInstructionIndex = target;
-                jumpedLastInstruction = true;
-            }
+            registers.put("PC", target & 0xFFFF);
+            jumpedLastInstruction = true;
         } catch (NumberFormatException ex) {
-            registers.put("OUT", 0xFFFF);
         }
     }
 
@@ -360,19 +368,14 @@ public class SimulationView extends VBox {
         return null;
     }
 
-    private void updateZeroFlag() {
-        int outVal = registers.getOrDefault("OUT", 0);
-        registers.put("ZF", (outVal == 0) ? 1 : 0);
-    }
-
     private void updateDisplay() {
         regALabel.setText(fmt(registers.get("A")));
         regBLabel.setText(fmt(registers.get("B")));
         regCLabel.setText(fmt(registers.get("C")));
         regDLabel.setText(fmt(registers.get("D")));
         outLabel.setText(fmt(registers.get("OUT")));
+        pcLabel.setText(fmt(registers.get("PC")));
         zeroLabel.setText(String.valueOf(registers.getOrDefault("ZERO", 0)));
-
     }
 
     private String fmt(int val) {
@@ -381,10 +384,15 @@ public class SimulationView extends VBox {
 
     private void highlightCurrent() {
         if (historyListView == null) return;
+
         historyListView.getSelectionModel().clearSelection();
-        if (currentInstructionIndex < historyListView.getItems().size()) {
-            historyListView.getSelectionModel().select(currentInstructionIndex);
-            historyListView.scrollTo(currentInstructionIndex);
+
+        int pc = registers.getOrDefault("PC", 0);
+        if (pc < historyListView.getItems().size()) {
+            historyListView.getSelectionModel().select(pc);
+            historyListView.scrollTo(pc);
         }
+
+        pcLabel.setText(fmt(registers.get("PC")));
     }
 }

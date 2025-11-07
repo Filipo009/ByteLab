@@ -27,6 +27,7 @@ public class CommandSearchView extends VBox {
     private final Button clearButton = new Button("Wyczyść");
     private final Button submitButton = new Button("Zatwierdź");
     private final Button deleteLastButton = new Button("Usuń ostatni");
+    private final Button deleteSelectedButton = new Button("Usuń zaznaczony"); // ✅ NOWY PRZYCISK
 
     private enum Stage {INSTRUCTION, DATA, TARGET}
     private Stage currentStage = Stage.INSTRUCTION;
@@ -52,7 +53,8 @@ public class CommandSearchView extends VBox {
         suggestionsList.setItems(FXCollections.observableArrayList(instructions));
         submitButton.setDisable(true);
 
-        HBox buttonBox = new HBox(5, submitButton, clearButton, deleteLastButton);
+        // ✅ dodano deleteSelectedButton do layoutu
+        HBox buttonBox = new HBox(5, submitButton, clearButton, deleteLastButton, deleteSelectedButton);
 
         getChildren().addAll(inputField, suggestionsList, completedCommands, buttonBox);
 
@@ -60,18 +62,16 @@ public class CommandSearchView extends VBox {
     }
 
     private void setupInstructionMaps() {
-        // dataRegisters: co trzeba wybrać jako dane (pierwsza lista)
         for (String instr : instructions) {
             switch (instr) {
                 case "NOT", "MOV", "OUT" -> dataRegisters.put(instr, List.of("REG A", "REG B", "REG C", "REG D"));
                 case "NOP" -> dataRegisters.put(instr, List.of("---"));
-                case "IN" -> dataRegisters.put(instr, List.of("WPROWADŹ HEX")); // IN: dane wpisywane przez użytkownika
-                case "JUMP" -> dataRegisters.put(instr, List.of("---")); // JUMP nie ma rejestrów danych
+                case "IN" -> dataRegisters.put(instr, List.of("WPROWADŹ HEX"));
+                case "JUMP" -> dataRegisters.put(instr, List.of("---"));
                 default -> dataRegisters.put(instr, List.of("---"));
             }
         }
 
-        // targetRegisters: co trzeba wybrać jako cel (druga lista)
         for (String instr : instructions) {
             switch (instr) {
                 case "ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN":
@@ -81,26 +81,22 @@ public class CommandSearchView extends VBox {
                     targetRegisters.put(instr, List.of("---"));
                     break;
                 case "JUMP":
-                    targetRegisters.put(instr, List.of("WPROWADŹ ADRES")); // JUMP: wpisz adres (HEX)
+                    targetRegisters.put(instr, List.of("WPROWADŹ ADRES"));
                     break;
             }
         }
     }
 
     private void setupListeners() {
-        // Filtr podpowiedzi podczas wpisywania instrukcji
         inputField.textProperty().addListener((obs, oldText, newText) -> {
             if (currentStage == Stage.INSTRUCTION) updateSuggestions(newText);
         });
 
-        // Obsługa klawiszy w polu input
         inputField.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.DOWN) {
-                // przejdź na listę sugestii
                 suggestionsList.requestFocus();
                 suggestionsList.getSelectionModel().selectFirst();
             } else if (e.getCode() == KeyCode.ENTER) {
-                // LOGIKA ENTER
                 if (currentStage == Stage.INSTRUCTION) {
                     String sel = suggestionsList.getSelectionModel().getSelectedItem();
                     if (sel != null) {
@@ -108,12 +104,10 @@ public class CommandSearchView extends VBox {
                         return;
                     }
                 } else if (currentStage == Stage.DATA) {
-                    // Dla IN: wpisujemy HEX w polu input -> zatwierdź dane i przejdź do TARGET
                     if ("IN".equals(selectedInstruction)) {
                         String hex = inputField.getText().trim();
                         if (validateHex(hex)) {
                             selectedData = hex.toUpperCase();
-                            // przejdź do wyboru rejestru docelowego
                             currentStage = Stage.TARGET;
                             inputField.clear();
                             inputField.setPromptText("Wybierz rejestr docelowy lub wciśnij Enter aby zatwierdzić wybrany");
@@ -126,18 +120,14 @@ public class CommandSearchView extends VBox {
                             return;
                         }
                     }
-                    // Inne instrukcje: jeśli lista na DATA ma elementy, wybierz aktualny i przejdź dalej
                     String selData = suggestionsList.getSelectionModel().getSelectedItem();
                     if (selData != null) {
                         handleSelection(selData);
                         return;
                     }
                 } else if (currentStage == Stage.TARGET) {
-                    // Jeśli suggestionsList ma zaznaczenie -> wybierz i sfinalizuj
                     String selTarget = suggestionsList.getSelectionModel().getSelectedItem();
                     if (selTarget != null && !selTarget.isEmpty()) {
-                        // Jeśli to pola typu 'WPROWADŹ ADRES' lub '---' które są tylko placeholderami,
-                        // a instrukcja wymaga wpisania wartości (JUMP), obsłuż to z pola input
                         if ("WPROWADŹ ADRES".equals(selTarget) || "WPROWADŹ HEX".equals(selTarget) || "---".equals(selTarget)) {
                             if ("JUMP".equals(selectedInstruction)) {
                                 String addr = inputField.getText().trim();
@@ -151,19 +141,16 @@ public class CommandSearchView extends VBox {
                                     return;
                                 }
                             } else {
-                                // jeśli target jest '---' (np. OUT) -> ustaw i finalize
                                 selectedTarget = selTarget;
                                 finalizeCommand();
                                 return;
                             }
                         } else {
-                            // normalny target wybierany z listy
                             selectedTarget = selTarget;
                             finalizeCommand();
                             return;
                         }
                     } else {
-                        // jeśli lista jest pusta (np. JUMP) to odczytaj pole input jako adres
                         if ("JUMP".equals(selectedInstruction)) {
                             String addr = inputField.getText().trim();
                             if (validateHex(addr)) {
@@ -181,7 +168,6 @@ public class CommandSearchView extends VBox {
             }
         });
 
-        // Obsługa klawiszy na liście sugestii
         suggestionsList.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ENTER) {
                 handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
@@ -190,16 +176,13 @@ public class CommandSearchView extends VBox {
             }
         });
 
-        // Kliknięcie myszką
         suggestionsList.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
                 handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
             }
         });
 
-        // Przyciski
         submitButton.setOnAction(e -> {
-            // jeśli użytkownik nie wybrał target z listy ale jest wpisany w input (np. JUMP), próbuj to użyć
             if (currentStage == Stage.TARGET && ("JUMP".equals(selectedInstruction) || suggestionsList.getItems().isEmpty())) {
                 String maybe = inputField.getText().trim();
                 if (!maybe.isEmpty() && validateHex(maybe)) {
@@ -218,15 +201,19 @@ public class CommandSearchView extends VBox {
                 if (commandCounter > 0) commandCounter--;
             }
         });
+
+        // ✅ Nowy listener do usuwania zaznaczonego elementu
+        deleteSelectedButton.setOnAction(e -> {
+            int index = completedCommands.getSelectionModel().getSelectedIndex();
+            if (index >= 0) {
+                completedCommands.getItems().remove(index);
+            }
+        });
     }
 
-    /**
-     * Walidacja HEX: maksymalnie 4 znaki, zakres 0-9 A-F (duże lub małe)
-     */
     private boolean validateHex(String hex) {
         if (hex == null) return false;
         String s = hex.trim();
-        // akceptujemy też prefix 0x lub 0X, usuwamy go przed walidacją
         if (s.startsWith("0x") || s.startsWith("0X")) s = s.substring(2);
         return s.matches("(?i)^[0-9A-F]{1,4}$");
     }
@@ -255,24 +242,21 @@ public class CommandSearchView extends VBox {
                 }
 
                 if (selectedInstruction.equals("IN")) {
-                    // IN: użytkownik wpisuje dane HEX w polu input
                     inputField.clear();
                     inputField.setPromptText("Wprowadź dane HEX (maks 4 znaki) i naciśnij Enter");
-                    suggestionsList.setItems(FXCollections.observableArrayList()); // usuń listę
+                    suggestionsList.setItems(FXCollections.observableArrayList());
                     return;
                 }
 
                 if (selectedInstruction.equals("JUMP")) {
-                    // JUMP: nie ma danych, natychmiast przejdź do TARGET (adres)
                     selectedData = "---";
                     currentStage = Stage.TARGET;
                     inputField.clear();
                     inputField.setPromptText("Wprowadź ADRES w HEX (np. 0x00FF) i naciśnij Enter");
-                    suggestionsList.setItems(FXCollections.observableArrayList()); // wpisz adres w pole
+                    suggestionsList.setItems(FXCollections.observableArrayList());
                     return;
                 }
 
-                // standardowy flow: wyświetl rejestry danych do wyboru (często '---')
                 inputField.clear();
                 inputField.setPromptText("Wybierz rejestr danych lub zatwierdź Enterem...");
                 suggestionsList.setItems(FXCollections.observableArrayList(
@@ -281,11 +265,9 @@ public class CommandSearchView extends VBox {
             }
 
             case DATA -> {
-                // jeśli IN - dane przychodzą z input (nie przez listę)
                 if (!"IN".equals(selectedInstruction)) {
                     selectedData = selection;
                 }
-                // przejdź do TARGET
                 currentStage = Stage.TARGET;
                 inputField.clear();
                 inputField.setPromptText("Wybierz rejestr docelowy lub wpisz adres (dla JUMP) i naciśnij Enter");
@@ -295,41 +277,30 @@ public class CommandSearchView extends VBox {
             }
 
             case TARGET -> {
-                // Jeżeli wybrano z listy coś (np. REG A) -> ustaw i enable submit
                 selectedTarget = selection;
                 inputField.clear();
                 inputField.setPromptText("Instrukcja gotowa! Wciśnij Zatwierdź lub Enter");
                 submitButton.setDisable(false);
-                // Jeśli target był placeholderem 'WPROWADŹ ADRES', użytkownik musi wpisać w pole i nacisnąć Enter
             }
         }
     }
 
     private void finalizeCommand() {
-        // Warunki bezpieczeństwa
         if (selectedInstruction == null) return;
-
-        // dla IN: selectedData musi być ustawione (wprowadzone i zwalidowane)
         if ("IN".equals(selectedInstruction)) {
             if (selectedData == null || selectedData.isEmpty()) return;
-        } else {
-            if (selectedData == null) return;
-        }
+        } else if (selectedData == null) return;
 
-        // dla JUMP: selectedTarget to wpisany adres
         if ("JUMP".equals(selectedInstruction)) {
             if (selectedTarget == null || selectedTarget.isEmpty()) return;
-        } else {
-            if (selectedTarget == null) return;
-        }
+        } else if (selectedTarget == null) return;
 
-        // utwórz polecenie
-        String binaryNumber = Integer.toBinaryString(commandCounter++);
-        String command = binaryNumber + ": " + selectedInstruction + " " + selectedData + " -> " + selectedTarget;
+        // ✅ numer polecenia w HEX zamiast binarnie
+        String hexNumber = String.format("0x%04X", commandCounter++);
+        String command = hexNumber + ": " + selectedInstruction + " " + selectedData + " -> " + selectedTarget;
         completedCommands.getItems().add(command);
         completedCommands.scrollTo(completedCommands.getItems().size() - 1);
 
-        // reset
         clearSelection();
     }
 
@@ -350,6 +321,7 @@ public class CommandSearchView extends VBox {
         completedCommands.getItems().clear();
         commandCounter = 0;
     }
+
     public ListView<String> getCompletedCommandsListView() {
         return completedCommands;
     }
