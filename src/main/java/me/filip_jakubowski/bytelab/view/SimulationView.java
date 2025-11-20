@@ -20,6 +20,7 @@ public class SimulationView extends VBox {
     private final Label regBLabel = new Label();
     private final Label regCLabel = new Label();
     private final Label regDLabel = new Label();
+    private final Label reg0Label = new Label();   // NEW LABEL
     private final Label outLabel = new Label();
     private final Label pcLabel = new Label();
     private final Label zeroLabel = new Label();
@@ -50,6 +51,7 @@ public class SimulationView extends VBox {
     }
 
     private void initRegisters() {
+        registers.put("0", 0);  // REG 0
         registers.put("A", 0);
         registers.put("B", 0);
         registers.put("C", 0);
@@ -65,13 +67,14 @@ public class SimulationView extends VBox {
         grid.setVgap(10);
         grid.setAlignment(Pos.CENTER);
 
-        grid.addRow(0, new Label("REG A:"), regALabel);
-        grid.addRow(1, new Label("REG B:"), regBLabel);
-        grid.addRow(2, new Label("REG C:"), regCLabel);
-        grid.addRow(3, new Label("REG D:"), regDLabel);
-        grid.addRow(4, new Label("OUT:"), outLabel);
-        grid.addRow(5, new Label("PC:"), pcLabel);
-        grid.addRow(6, new Label("Flaga Zero:"), zeroLabel);
+        grid.addRow(0, new Label("REG 0:"), reg0Label);
+        grid.addRow(1, new Label("REG A:"), regALabel);
+        grid.addRow(2, new Label("REG B:"), regBLabel);
+        grid.addRow(3, new Label("REG C:"), regCLabel);
+        grid.addRow(4, new Label("REG D:"), regDLabel);
+        grid.addRow(5, new Label("OUT:"), outLabel);
+        grid.addRow(6, new Label("PC:"), pcLabel);
+        grid.addRow(7, new Label("Flaga Zero:"), zeroLabel);
 
         return grid;
     }
@@ -184,7 +187,7 @@ public class SimulationView extends VBox {
         return regs;
     }
 
-    // ======== Logika instrukcji ========
+    // ======== Instrukcje ========
 
     private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"};
 
@@ -248,11 +251,13 @@ public class SimulationView extends VBox {
         List<String> regs = findRegistersInArgs(args);
         if (!regs.isEmpty()) {
             String dst = regs.get(0);
-            if (registers.containsKey(dst)) {
+
+            // NIE zapisujemy do REG 0 i NIE zmieniamy flagi
+            if (!dst.equals("0")) {
                 registers.put(dst, result);
+                registers.put("ZERO", (result == 0) ? 1 : 0);
             }
         }
-
         registers.put("ZERO", (result == 0) ? 1 : 0);
     }
 
@@ -263,8 +268,10 @@ public class SimulationView extends VBox {
         List<String> regs = findRegistersInArgs(args);
         if (!regs.isEmpty()) {
             String dst = regs.get(0);
-            if (registers.containsKey(dst)) {
+
+            if (!dst.equals("0")) {
                 registers.put(dst, result);
+                registers.put("ZERO", (result == 0) ? 1 : 0);
             }
         }
 
@@ -279,7 +286,8 @@ public class SimulationView extends VBox {
         String dst = regs.get(1);
 
         if (registers.containsKey(src) && registers.containsKey(dst)) {
-            registers.put(dst, registers.get(src) & 0xFFFF);
+            if (!dst.equals("0"))
+                registers.put(dst, registers.get(src) & 0xFFFF);
         }
     }
 
@@ -294,7 +302,7 @@ public class SimulationView extends VBox {
                 valueToken = a;
                 continue;
             }
-            if (a.toUpperCase().startsWith("REG") || a.matches("^[ABCD]$")) {
+            if (a.toUpperCase().startsWith("REG") || a.matches("^[0ABCD]$")) {
                 regToken = a;
             }
         }
@@ -304,7 +312,7 @@ public class SimulationView extends VBox {
         try {
             int val = Integer.parseInt(valueToken.replaceFirst("(?i)0x", ""), 16) & 0xFFFF;
             String reg = regToken.replace("REG", "").trim().toUpperCase();
-            if (registers.containsKey(reg)) {
+            if (registers.containsKey(reg) && !reg.equals("0")) {
                 registers.put(reg, val);
             }
         } catch (NumberFormatException ignored) {}
@@ -352,7 +360,6 @@ public class SimulationView extends VBox {
         if (args.length < 1) return;
 
         if (registers.getOrDefault("ZERO", 0) != 1) {
-            jumpedLastInstruction = false;
             return;
         }
 
@@ -375,13 +382,14 @@ public class SimulationView extends VBox {
     }
 
     private void updateDisplay() {
+        reg0Label.setText(fmt(registers.get("0")));
         regALabel.setText(fmt(registers.get("A")));
         regBLabel.setText(fmt(registers.get("B")));
         regCLabel.setText(fmt(registers.get("C")));
         regDLabel.setText(fmt(registers.get("D")));
         outLabel.setText(fmt(registers.get("OUT")));
         pcLabel.setText(fmt(registers.get("PC")));
-        zeroLabel.setText(String.valueOf(registers.getOrDefault("ZERO", 0)));
+        zeroLabel.setText(String.valueOf(registers.get("ZERO")));
     }
 
     private String fmt(int val) {

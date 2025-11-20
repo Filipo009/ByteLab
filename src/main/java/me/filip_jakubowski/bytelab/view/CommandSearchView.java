@@ -58,9 +58,12 @@ public class CommandSearchView extends VBox {
     }
 
     private void setupInstructionMaps() {
+
+        List<String> regList = List.of("REG 0", "REG A", "REG B", "REG C", "REG D");
+
         for (String instr : instructions) {
             switch (instr) {
-                case "NOT", "MOV", "OUT" -> dataRegisters.put(instr, List.of("REG A", "REG B", "REG C", "REG D"));
+                case "NOT", "MOV", "OUT" -> dataRegisters.put(instr, regList);
                 case "NOP" -> dataRegisters.put(instr, List.of("-----"));
                 case "IN" -> dataRegisters.put(instr, List.of("WPROWADŹ HEX"));
                 case "JUMP", "JZ" -> dataRegisters.put(instr, List.of("-----"));
@@ -71,7 +74,7 @@ public class CommandSearchView extends VBox {
         for (String instr : instructions) {
             switch (instr) {
                 case "ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN":
-                    targetRegisters.put(instr, List.of("REG A", "REG B", "REG C", "REG D"));
+                    targetRegisters.put(instr, regList);
                     break;
                 case "OUT", "NOP":
                     targetRegisters.put(instr, List.of("-----"));
@@ -184,7 +187,6 @@ public class CommandSearchView extends VBox {
             ObservableList<String> items = completedCommands.getItems();
             if (!items.isEmpty()) {
                 items.remove(items.size() - 1);
-                // after removal reindex everything and update counter
                 reindexCompletedCommands();
                 commandCounter = completedCommands.getItems().size();
             }
@@ -292,10 +294,6 @@ public class CommandSearchView extends VBox {
         clearSelection();
     }
 
-    /**
-     * Reindexuje wpisy w completedCommands tak, aby prefiks adresu (0xNNNN) był kolejnym indeksem od 0.
-     * Zachowuje treść instrukcji po separatorze ": ".
-     */
     private void reindexCompletedCommands() {
         ObservableList<String> items = completedCommands.getItems();
         if (items.isEmpty()) return;
@@ -306,12 +304,8 @@ public class CommandSearchView extends VBox {
             String after;
             int colon = line.indexOf(":");
             if (colon >= 0 && colon + 2 < line.length()) {
-                // zachowaj wszystko po ": " (jeśli obecne)
                 after = line.substring(Math.min(colon + 2, line.length()));
             } else {
-                // jeśli format nieznany, użyj całej linii (bez numeru)
-                // albo w najgorszym wypadku traktuj jako całość
-                // spróbuj usunąć ewentualny prefiks do pierwszego spacji
                 int firstSpace = line.indexOf(' ');
                 if (firstSpace >= 0 && firstSpace + 1 < line.length()) {
                     after = line.substring(firstSpace + 1);
