@@ -231,7 +231,6 @@ public class SimulationView extends VBox {
             if (!regs.isEmpty()) {
                 String dst = regs.get(0);
                 int val = registers.getOrDefault(dst, 0);
-                registers.put("ZERO", (val == 0) ? 1 : 0);
             }
         }
 
@@ -252,14 +251,17 @@ public class SimulationView extends VBox {
         if (!regs.isEmpty()) {
             String dst = regs.get(0);
 
-            // NIE zapisujemy do REG 0 i NIE zmieniamy flagi
+            // Nie zapisujemy do REG 0
             if (!dst.equals("0")) {
                 registers.put(dst, result);
-                registers.put("ZERO", (result == 0) ? 1 : 0);
             }
+
+            // Flaga ZERO powinna odzwierciedlać wynik ALU niezależnie od docelowego rejestru
+            registers.put("ZERO", (result == 0) ? 1 : 0);
         }
-        registers.put("ZERO", (result == 0) ? 1 : 0);
     }
+
+
 
     private void notOp(String[] args) {
         int a = registers.getOrDefault("A", 0);
@@ -271,12 +273,14 @@ public class SimulationView extends VBox {
 
             if (!dst.equals("0")) {
                 registers.put(dst, result);
-                registers.put("ZERO", (result == 0) ? 1 : 0);
             }
-        }
 
-        registers.put("ZERO", (result == 0) ? 1 : 0);
+            // ZERO odzwierciedla wynik NOT niezależnie od celu zapisu
+            registers.put("ZERO", (result == 0) ? 1 : 0);
+        }
     }
+
+
 
     private void mov(String[] args) {
         List<String> regs = findRegistersInArgs(args);
