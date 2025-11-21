@@ -189,7 +189,7 @@ public class SimulationView extends VBox {
 
     // ======== Instrukcje ========
 
-    private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"};
+    private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"};
 
     private void execute(String line) {
         if (line == null || line.isBlank()) return;

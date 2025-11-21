@@ -13,8 +13,9 @@ import java.util.*;
 public class CommandSearchView extends VBox {
 
     private final List<String> instructions = List.of(
-            "ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"
+            "ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"
     );
+
 
     private final Map<String, List<String>> dataRegisters = new HashMap<>();
     private final Map<String, List<String>> targetRegisters = new HashMap<>();
@@ -73,7 +74,7 @@ public class CommandSearchView extends VBox {
 
         for (String instr : instructions) {
             switch (instr) {
-                case "ADD", "SUB", "AND", "OR", "NOT", "MOV", "IN":
+                case "ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN":
                     targetRegisters.put(instr, regList);
                     break;
                 case "OUT", "NOP":
