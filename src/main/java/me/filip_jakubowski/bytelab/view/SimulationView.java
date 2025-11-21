@@ -41,7 +41,7 @@ public class SimulationView extends VBox {
         setAlignment(Pos.TOP_CENTER);
 
         initRegisters();
-        getChildren().addAll(new Label("Symulacja rejestrów"), createRegisterGrid(), createControlPanel());
+        getChildren().addAll(new Label("Stan rejestrów:"), createRegisterGrid(), createControlPanel());
         updateDisplay();
 
         runButton.setOnAction(e -> start());
