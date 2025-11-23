@@ -20,6 +20,7 @@ public class SimulationView extends VBox {
     private final Label regBLabel = new Label();
     private final Label regCLabel = new Label();
     private final Label regDLabel = new Label();
+    private final Label regELabel = new Label();
     private final Label reg0Label = new Label();   // NEW LABEL
     private final Label outLabel = new Label();
     private final Label pcLabel = new Label();
@@ -56,6 +57,7 @@ public class SimulationView extends VBox {
         registers.put("B", 0);
         registers.put("C", 0);
         registers.put("D", 0);
+        registers.put("E", 0);
         registers.put("OUT", 0);
         registers.put("PC", 0);
         registers.put("ZERO", 0);
@@ -72,9 +74,10 @@ public class SimulationView extends VBox {
         grid.addRow(2, new Label("REG B:"), regBLabel);
         grid.addRow(3, new Label("REG C:"), regCLabel);
         grid.addRow(4, new Label("REG D:"), regDLabel);
-        grid.addRow(5, new Label("OUT:"), outLabel);
-        grid.addRow(6, new Label("PC:"), pcLabel);
-        grid.addRow(7, new Label("Flaga Zero:"), zeroLabel);
+        grid.addRow(5, new Label("REG E:"), regELabel);
+        grid.addRow(6, new Label("OUT:"), outLabel);
+        grid.addRow(7, new Label("PC:"), pcLabel);
+        grid.addRow(8, new Label("Flaga Zero:"), zeroLabel);
 
         return grid;
     }
@@ -391,6 +394,7 @@ public class SimulationView extends VBox {
         regBLabel.setText(fmt(registers.get("B")));
         regCLabel.setText(fmt(registers.get("C")));
         regDLabel.setText(fmt(registers.get("D")));
+        regELabel.setText(fmt(registers.get("E")));
         outLabel.setText(fmt(registers.get("OUT")));
         pcLabel.setText(fmt(registers.get("PC")));
         zeroLabel.setText(String.valueOf(registers.get("ZERO")));

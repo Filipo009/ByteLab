@@ -60,7 +60,7 @@ public class CommandSearchView extends VBox {
 
     private void setupInstructionMaps() {
 
-        List<String> regList = List.of("REG 0", "REG A", "REG B", "REG C", "REG D");
+        List<String> regList = List.of("REG 0", "REG A", "REG B", "REG C", "REG D", "REG E");
 
         for (String instr : instructions) {
             switch (instr) {
