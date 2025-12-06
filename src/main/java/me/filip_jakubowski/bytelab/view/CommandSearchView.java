@@ -16,6 +16,7 @@ public class CommandSearchView extends VBox {
             "ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"
     );
 
+
     private final Map<String, List<String>> dataRegisters = new HashMap<>();
     private final Map<String, List<String>> targetRegisters = new HashMap<>();
 
@@ -26,25 +27,15 @@ public class CommandSearchView extends VBox {
     private final Button clearButton = new Button("Wyczyść");
     private final Button deleteLastButton = new Button("Usuń ostatni");
     private final Button deleteSelectedButton = new Button("Usuń zaznaczony");
-    private final Button insertAtButton = new Button("Dodaj w wybranym");
-    private final Button undoButton = new Button("Cofnij");
-    private final Button redoButton = new Button("Ponów");
 
     private enum Stage {INSTRUCTION, DATA, TARGET}
     private Stage currentStage = Stage.INSTRUCTION;
-
-    private boolean insertMode = false;
-    private int insertTargetAddress = -1;
 
     private String selectedInstruction;
     private String selectedData;
     private String selectedTarget;
 
     private int commandCounter = 0;
-
-    // Undo/Redo stacks
-    private final Stack<Runnable> undoStack = new Stack<>();
-    private final Stack<Runnable> redoStack = new Stack<>();
 
     public CommandSearchView() {
         setSpacing(5);
@@ -60,12 +51,11 @@ public class CommandSearchView extends VBox {
 
         suggestionsList.setItems(FXCollections.observableArrayList(instructions));
 
-        HBox buttonBox = new HBox(5, insertAtButton, undoButton, redoButton, clearButton, deleteLastButton, deleteSelectedButton);
+        HBox buttonBox = new HBox(5, clearButton, deleteLastButton, deleteSelectedButton);
 
         getChildren().addAll(inputField, suggestionsList, completedCommands, buttonBox);
 
         setupListeners();
-        updateUndoRedoButtons();
     }
 
     private void setupInstructionMaps() {
@@ -107,145 +97,181 @@ public class CommandSearchView extends VBox {
                 suggestionsList.requestFocus();
                 suggestionsList.getSelectionModel().selectFirst();
             } else if (e.getCode() == KeyCode.ENTER) {
-                processEnter();
+                if (currentStage == Stage.INSTRUCTION) {
+                    String sel = suggestionsList.getSelectionModel().getSelectedItem();
+                    if (sel != null) {
+                        handleSelection(sel);
+                        return;
+                    }
+                } else if (currentStage == Stage.DATA) {
+                    if ("IN".equals(selectedInstruction)) {
+                        String hex = inputField.getText().trim();
+                        if (validateHex(hex)) {
+                            selectedData = hex.toUpperCase();
+                            currentStage = Stage.TARGET;
+                            inputField.clear();
+                            inputField.setPromptText("Wybierz rejestr docelowy lub wciśnij Enter aby zatwierdzić wybrany");
+                            suggestionsList.setItems(FXCollections.observableArrayList(targetRegisters.getOrDefault(selectedInstruction, List.of("-----"))));
+                            suggestionsList.getSelectionModel().selectFirst();
+                            return;
+                        } else {
+                            inputField.clear();
+                            inputField.setPromptText("BŁĄD: wprowadź HEX 0-FFFF");
+                            return;
+                        }
+                    }
+                    String selData = suggestionsList.getSelectionModel().getSelectedItem();
+                    if (selData != null) {
+                        handleSelection(selData);
+                        return;
+                    }
+                } else if (currentStage == Stage.TARGET) {
+                    String selTarget = suggestionsList.getSelectionModel().getSelectedItem();
+                    if (selTarget != null && !selTarget.isEmpty()) {
+                        if ("WPROWADŹ ADRES".equals(selTarget) || "WPROWADŹ HEX".equals(selTarget) || "-----".equals(selTarget)) {
+                            if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
+                                String addr = inputField.getText().trim();
+                                if (validateHex(addr)) {
+                                    selectedTarget = addr.toUpperCase();
+                                    finalizeCommand();
+                                    return;
+                                } else {
+                                    inputField.clear();
+                                    inputField.setPromptText("BŁĄD: wprowadź ADRES w HEX (0-FFFF)");
+                                    return;
+                                }
+                            } else {
+                                selectedTarget = selTarget;
+                                finalizeCommand();
+                                return;
+                            }
+                        } else {
+                            selectedTarget = selTarget;
+                            finalizeCommand();
+                            return;
+                        }
+                    } else {
+                        if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
+                            String addr = inputField.getText().trim();
+                            if (validateHex(addr)) {
+                                selectedTarget = addr.toUpperCase();
+                                finalizeCommand();
+                                return;
+                            } else {
+                                inputField.clear();
+                                inputField.setPromptText("BŁĄD: wprowadź ADRES w HEX (0-FFFF)");
+                                return;
+                            }
+                        }
+                    }
+                }
             }
         });
 
         suggestionsList.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.ENTER) processEnter();
-            else if (e.getCode() == KeyCode.UP && suggestionsList.getSelectionModel().getSelectedIndex() == 0)
+            if (e.getCode() == KeyCode.ENTER) {
+                handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
+            } else if (e.getCode() == KeyCode.UP && suggestionsList.getSelectionModel().getSelectedIndex() == 0) {
                 inputField.requestFocus();
+            }
         });
 
         suggestionsList.setOnMouseClicked(e -> {
-            if (e.getClickCount() == 2) processEnter();
+            if (e.getClickCount() == 2) {
+                handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
+            }
         });
 
-        deleteLastButton.setOnAction(e -> deleteLast());
-        deleteSelectedButton.setOnAction(e -> deleteSelected());
         clearButton.setOnAction(e -> clearAll());
 
-        insertAtButton.setOnAction(e -> askInsertAddress());
+        deleteLastButton.setOnAction(e -> {
+            ObservableList<String> items = completedCommands.getItems();
+            if (!items.isEmpty()) {
+                items.remove(items.size() - 1);
+                reindexCompletedCommands();
+                commandCounter = completedCommands.getItems().size();
+            }
+        });
 
-        undoButton.setOnAction(e -> performUndo());
-        redoButton.setOnAction(e -> performRedo());
+        deleteSelectedButton.setOnAction(e -> {
+            int index = completedCommands.getSelectionModel().getSelectedIndex();
+            if (index >= 0) {
+                completedCommands.getItems().remove(index);
+                reindexCompletedCommands();
+                commandCounter = completedCommands.getItems().size();
+            }
+        });
     }
 
-    private void askInsertAddress() {
-        TextInputDialog dialog = new TextInputDialog("0x0000");
-        dialog.setTitle("Wybór adresu");
-        dialog.setHeaderText("Podaj adres HEX nowej instrukcji:");
-        Optional<String> result = dialog.showAndWait();
-        if (result.isEmpty()) return;
-
-        String text = result.get().trim();
-        if (!validateHex(text)) return;
-
-        insertTargetAddress = Integer.parseInt(text.replace("0x", "").replace("0X", ""), 16);
-        insertMode = true;
-
-        if (insertTargetAddress > completedCommands.getItems().size()) {
-            for (int i = completedCommands.getItems().size(); i < insertTargetAddress; i++) {
-                forceAddAt(i, "NOP", "-----", "-----");
-            }
-        }
-
-        reindexCompletedCommands();
-        clearSelection();
+    private boolean validateHex(String hex) {
+        if (hex == null) return false;
+        String s = hex.trim();
+        if (s.startsWith("0x") || s.startsWith("0X")) s = s.substring(2);
+        return s.matches("(?i)^[0-9A-F]{1,4}$");
     }
 
     private void updateSuggestions(String text) {
         ObservableList<String> filtered = FXCollections.observableArrayList();
-        for (String instr : instructions)
-            if (instr.toUpperCase().startsWith(text.toUpperCase()))
-                filtered.add(instr);
-
-        suggestionsList.setItems(filtered.isEmpty()
-                ? FXCollections.observableArrayList()
-                : filtered);
-    }
-
-    private void processEnter() {
-        String sel = suggestionsList.getSelectionModel().getSelectedItem();
-        if (currentStage == Stage.INSTRUCTION && sel != null) {
-            handleSelection(sel);
-            return;
+        for (String instr : instructions) {
+            if (instr.toUpperCase().startsWith(text.toUpperCase())) filtered.add(instr);
         }
-
-        if (currentStage == Stage.DATA) {
-            if ("IN".equals(selectedInstruction)) {
-                String hex = inputField.getText().trim();
-                if (!validateHex(hex)) {
-                    inputField.clear();
-                    inputField.setPromptText("Błąd HEX!");
-                    return;
-                }
-                selectedData = hex.toUpperCase();
-                currentStage = Stage.TARGET;
-                inputField.clear();
-                showTargetOptions();
-                return;
-            }
-            if (sel != null) {
-                handleSelection(sel);
-                return;
-            }
-        }
-
-        if (currentStage == Stage.TARGET)
-            finalizeCommand();
-    }
-
-    private void showTargetOptions() {
-        suggestionsList.setItems(FXCollections.observableArrayList(
-                targetRegisters.getOrDefault(selectedInstruction, List.of("-----"))
-        ));
-        suggestionsList.getSelectionModel().selectFirst();
+        suggestionsList.setItems(filtered.isEmpty() ? FXCollections.observableArrayList() : filtered);
     }
 
     private void handleSelection(String selection) {
+        if (selection == null) return;
+
         switch (currentStage) {
             case INSTRUCTION -> {
                 selectedInstruction = selection;
                 currentStage = Stage.DATA;
 
-                if ("NOP".equals(selectedInstruction)) {
+                if (selectedInstruction.equals("NOP")) {
                     selectedData = "-----";
                     selectedTarget = "-----";
                     finalizeCommand();
                     return;
                 }
-                if ("IN".equals(selectedInstruction)) {
+
+                if (selectedInstruction.equals("IN")) {
                     inputField.clear();
-                    inputField.setPromptText("Podaj HEX i Enter");
+                    inputField.setPromptText("Wprowadź dane HEX (maks 4 znaki) i naciśnij Enter");
                     suggestionsList.setItems(FXCollections.observableArrayList());
                     return;
                 }
-                if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
+
+                if (selectedInstruction.equals("JUMP") || selectedInstruction.equals("JZ")) {
                     selectedData = "-----";
                     currentStage = Stage.TARGET;
-                    inputField.setPromptText("Podaj HEX adresu");
+                    inputField.clear();
+                    inputField.setPromptText("Wprowadź ADRES w HEX (np. 0x00FF) i naciśnij Enter");
                     suggestionsList.setItems(FXCollections.observableArrayList());
                     return;
                 }
 
                 inputField.clear();
-                inputField.setPromptText("Wybierz rejestr danych");
+                inputField.setPromptText("Wybierz rejestr danych i zatwierdź Enterem...");
                 suggestionsList.setItems(FXCollections.observableArrayList(
-                        dataRegisters.get(selectedInstruction)
-                ));
+                        dataRegisters.getOrDefault(selectedInstruction, List.of("-----"))));
                 suggestionsList.getSelectionModel().selectFirst();
             }
 
             case DATA -> {
-                selectedData = selection;
+                if (!"IN".equals(selectedInstruction)) {
+                    selectedData = selection;
+                }
                 currentStage = Stage.TARGET;
                 inputField.clear();
-                showTargetOptions();
+                inputField.setPromptText("Wybierz rejestr docelowy lub wpisz adres (dla JUMP/JZ) i naciśnij Enter");
+                suggestionsList.setItems(FXCollections.observableArrayList(
+                        targetRegisters.getOrDefault(selectedInstruction, List.of("-----"))));
+                suggestionsList.getSelectionModel().selectFirst();
             }
 
             case TARGET -> {
                 selectedTarget = selection;
+                inputField.clear();
+                inputField.setPromptText("Instrukcja gotowa! Wciśnij Enter, aby zapisać");
                 finalizeCommand();
             }
         }
@@ -253,102 +279,45 @@ public class CommandSearchView extends VBox {
 
     private void finalizeCommand() {
         if (selectedInstruction == null) return;
+        if ("IN".equals(selectedInstruction)) {
+            if (selectedData == null || selectedData.isEmpty()) return;
+        } else if (selectedData == null) return;
 
-        int index = insertMode ? insertTargetAddress : commandCounter;
+        if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
+            if (selectedTarget == null || selectedTarget.isEmpty()) return;
+        } else if (selectedTarget == null) return;
 
-        String beforeInsert = completedCommands.getItems().toString();
-
-        forceAddAt(index, selectedInstruction, selectedData, selectedTarget);
-        reindexCompletedCommands();
-
-        undoStack.push(() -> {
-            completedCommands.getItems().clear();
-            completedCommands.getItems().addAll(parseHistory(beforeInsert));
-            reindexCompletedCommands();
-        });
-
-        redoStack.clear();
-        updateUndoRedoButtons();
-
-        insertMode = false;
-        insertTargetAddress = -1;
+        String hexNumber = String.format("0x%04X", commandCounter++);
+        String command = hexNumber + ": " + selectedInstruction + " " + selectedData + " -> " + selectedTarget;
+        completedCommands.getItems().add(command);
+        completedCommands.scrollTo(completedCommands.getItems().size() - 1);
 
         clearSelection();
-    }
-
-    private List<String> parseHistory(String text) {
-        text = text.replace("[", "").replace("]", "");
-        if (text.isBlank()) return new ArrayList<>();
-        return new ArrayList<>(Arrays.asList(text.split(", ")));
-    }
-
-    private void forceAddAt(int index, String instr, String data, String target) {
-        String cmd = String.format("0x%04X: %s %s -> %s", index, instr, data, target);
-        completedCommands.getItems().add(index, cmd);
     }
 
     private void reindexCompletedCommands() {
-        ObservableList<String> list = completedCommands.getItems();
-        for (int i = 0; i < list.size(); i++) {
-            String old = list.get(i);
-            int colon = old.indexOf(":");
-            list.set(i, String.format("0x%04X", i) + old.substring(colon));
+        ObservableList<String> items = completedCommands.getItems();
+        if (items.isEmpty()) return;
+
+        List<String> newItems = new ArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            String line = items.get(i);
+            String after;
+            int colon = line.indexOf(":");
+            if (colon >= 0 && colon + 2 < line.length()) {
+                after = line.substring(Math.min(colon + 2, line.length()));
+            } else {
+                int firstSpace = line.indexOf(' ');
+                if (firstSpace >= 0 && firstSpace + 1 < line.length()) {
+                    after = line.substring(firstSpace + 1);
+                } else {
+                    after = line;
+                }
+            }
+            String newLine = String.format("0x%04X: %s", i, after);
+            newItems.add(newLine);
         }
-        commandCounter = list.size();
-    }
-
-    private void deleteLast() {
-        if (completedCommands.getItems().isEmpty()) return;
-
-        String beforeDelete = completedCommands.getItems().toString();
-
-        completedCommands.getItems().removeLast();
-        reindexCompletedCommands();
-
-        undoStack.push(() -> {
-            completedCommands.getItems().clear();
-            completedCommands.getItems().addAll(parseHistory(beforeDelete));
-            reindexCompletedCommands();
-        });
-
-        redoStack.clear();
-        updateUndoRedoButtons();
-    }
-
-    private void deleteSelected() {
-        int index = completedCommands.getSelectionModel().getSelectedIndex();
-        if (index < 0) return;
-
-        String beforeDelete = completedCommands.getItems().toString();
-
-        completedCommands.getItems().remove(index);
-        reindexCompletedCommands();
-
-        undoStack.push(() -> {
-            completedCommands.getItems().clear();
-            completedCommands.getItems().addAll(parseHistory(beforeDelete));
-            reindexCompletedCommands();
-        });
-
-        redoStack.clear();
-        updateUndoRedoButtons();
-    }
-
-    private void clearAll() {
-        String beforeClear = completedCommands.getItems().toString();
-
-        completedCommands.getItems().clear();
-        commandCounter = 0;
-        clearSelection();
-
-        undoStack.push(() -> {
-            completedCommands.getItems().clear();
-            completedCommands.getItems().addAll(parseHistory(beforeClear));
-            reindexCompletedCommands();
-        });
-
-        redoStack.clear();
-        updateUndoRedoButtons();
+        items.setAll(newItems);
     }
 
     private void clearSelection() {
@@ -362,32 +331,10 @@ public class CommandSearchView extends VBox {
         selectedTarget = null;
     }
 
-    private void updateUndoRedoButtons() {
-        undoButton.setDisable(undoStack.isEmpty());
-        redoButton.setDisable(redoStack.isEmpty());
-    }
-
-    private void performUndo() {
-        if (undoStack.isEmpty()) return;
-        Runnable action = undoStack.pop();
-        action.run();
-        redoStack.push(action);
-        updateUndoRedoButtons();
-    }
-
-    private void performRedo() {
-        if (redoStack.isEmpty()) return;
-        Runnable action = redoStack.pop();
-        action.run();
-        undoStack.push(action);
-        updateUndoRedoButtons();
-    }
-
-    private boolean validateHex(String hex) {
-        if (hex == null) return false;
-        hex = hex.trim();
-        if (hex.startsWith("0x") || hex.startsWith("0X")) hex = hex.substring(2);
-        return hex.matches("(?i)^[0-9A-F]{1,4}$");
+    private void clearAll() {
+        clearSelection();
+        completedCommands.getItems().clear();
+        commandCounter = 0;
     }
 
     public ListView<String> getCompletedCommandsListView() {

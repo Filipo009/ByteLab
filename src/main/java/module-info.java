@@ -1,6 +1,7 @@
 module me.filip_jakubowski.bytelab {
     requires javafx.controls;
     requires javafx.fxml;
+    requires javafx.graphics;
 
 
     opens me.filip_jakubowski.bytelab to javafx.fxml;

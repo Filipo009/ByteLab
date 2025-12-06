@@ -5,4 +5,3 @@ public class Launcher {
         MainApp.main(args);
     }
 }
-    
