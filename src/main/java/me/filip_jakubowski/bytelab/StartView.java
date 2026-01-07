@@ -15,9 +15,9 @@ public class StartView extends VBox {
         Text title = new Text("Witaj w ByteLab");
         title.setFont(Font.font(32));
 
+        Button educationButton = new Button("Teoria + instrukcja obsługi");
+        Button gameButton = new Button("0 vs 1");
         Button emulatorButton = new Button("Uruchom Emulator");
-        Button educationButton = new Button("Tryb Edukacyjny");
-        Button gameButton = new Button("Logiczne Kółko i Krzyżyk");
 
         emulatorButton.setPrefWidth(220);
         educationButton.setPrefWidth(220);
