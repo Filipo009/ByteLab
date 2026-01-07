@@ -1,7 +1,55 @@
 .root {
-    -fx-font-family: "Consolas";
+    -fx-font-family: "Consolas", monospace;
+    -fx-background-color: #1e1e1e;
+    -fx-base: #2d2d2d;
+    -fx-text-base-color: #e0e0e0;
 }
 
 .label {
-    -fx-font-size: 14px;
+    -fx-text-fill: #b0b0b0;
+    -fx-font-size: 13px;
+}
+
+.text-field {
+    -fx-background-color: #333333;
+    -fx-text-fill: #ffffff;
+    -fx-border-color: #444444;
+    -fx-border-radius: 3;
+    -fx-prompt-text-fill: #666666;
+}
+
+.text-field:focused {
+    -fx-border-color: #007acc;
+}
+
+.list-view {
+    -fx-background-color: #252526;
+    -fx-border-color: #333333;
+}
+
+.list-cell {
+    -fx-background-color: #252526;
+    -fx-text-fill: #cccccc;
+    -fx-padding: 5;
+}
+
+.list-cell:selected {
+    -fx-background-color: #094771;
+    -fx-text-fill: #ffffff;
+}
+
+.button {
+    -fx-background-color: #3a3a3a;
+    -fx-text-fill: #ffffff;
+    -fx-padding: 8 15;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #4a4a4a;
+}
+
+.button:pressed {
+    -fx-background-color: #2a2a2a;
 }

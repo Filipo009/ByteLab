@@ -1,6 +1,5 @@
 package me.filip_jakubowski.bytelab.view;
 
-import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
@@ -9,21 +8,15 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.util.Duration;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class SimulationView extends VBox {
 
     private final Map<String, Integer> registers = new HashMap<>();
     private final Map<String, Integer> previousRegisters = new HashMap<>();
 
-    private final Label reg0Label = new Label();
-    private final Label regALabel = new Label();
-    private final Label regBLabel = new Label();
-    private final Label regCLabel = new Label();
-    private final Label regDLabel = new Label();
-    private final Label regELabel = new Label();
+    private final Map<String, Label> regLabels = new HashMap<>();
     private final Label outLabel = new Label();
     private final Label pcLabel = new Label();
     private final Label zeroLabel = new Label();
@@ -37,6 +30,9 @@ public class SimulationView extends VBox {
     private ListView<String> historyListView;
     private Timeline timeline;
     private boolean jumpedLastInstruction = false;
+
+    private final String COLOR_NORMAL = "#e0e0e0";
+    private final String COLOR_CHANGED = "#ff4444";
 
     public SimulationView() {
         setPadding(new Insets(10));
@@ -53,18 +49,17 @@ public class SimulationView extends VBox {
         stopButton.setOnAction(e -> pause());
         resetButton.setOnAction(e -> reset());
         stepButton.setOnAction(e -> step());
+
+        freqCombo.valueProperty().addListener((obs, old, newVal) -> {
+            if (timeline != null && timeline.getStatus() == Timeline.Status.RUNNING) {
+                start();
+            }
+        });
     }
 
     private void initRegisters() {
-        registers.put("0", 0);
-        registers.put("A", 0);
-        registers.put("B", 0);
-        registers.put("C", 0);
-        registers.put("D", 0);
-        registers.put("E", 0);
-        registers.put("OUT", 0);
-        registers.put("PC", 0);
-        registers.put("ZERO", 0);
+        String[] regs = {"0", "A", "B", "C", "D", "E", "OUT", "PC", "ZERO"};
+        for (String r : regs) registers.put(r, 0);
     }
 
     private void saveState() {
@@ -74,137 +69,97 @@ public class SimulationView extends VBox {
 
     private GridPane createRegisterGrid() {
         GridPane grid = new GridPane();
-        grid.setHgap(20);
-        grid.setVgap(10);
+        grid.setHgap(20); grid.setVgap(10);
         grid.setAlignment(Pos.CENTER);
 
-        grid.addRow(0, new Label("REG 0:"), reg0Label);
-        grid.addRow(1, new Label("REG A:"), regALabel);
-        grid.addRow(2, new Label("REG B:"), regBLabel);
-        grid.addRow(3, new Label("REG C:"), regCLabel);
-        grid.addRow(4, new Label("REG D:"), regDLabel);
-        grid.addRow(5, new Label("REG E:"), regELabel);
+        String[] regs = {"0", "A", "B", "C", "D", "E"};
+        for (int i = 0; i < regs.length; i++) {
+            Label lbl = new Label();
+            lbl.setStyle("-fx-text-fill: " + COLOR_NORMAL + "; -fx-font-weight: bold;");
+            regLabels.put(regs[i], lbl);
+            grid.addRow(i, new Label("REG " + regs[i] + ":"), lbl);
+        }
+
         grid.addRow(6, new Label("OUT:"), outLabel);
         grid.addRow(7, new Label("PC:"), pcLabel);
-        grid.addRow(8, new Label("Flaga Zero:"), zeroLabel);
-
+        grid.addRow(8, new Label("ZERO:"), zeroLabel);
+        resetColors();
         return grid;
     }
 
     private VBox createControlPanel() {
         VBox box = new VBox(10);
         box.setAlignment(Pos.CENTER);
-
-        HBox freqBox = new HBox(10, new Label("Taktowanie [Hz]:"), freqCombo);
-        freqBox.setAlignment(Pos.CENTER);
         freqCombo.getItems().addAll(1, 2, 4, 8, 16, 32, 64);
         freqCombo.setValue(4);
-
-        HBox buttons = new HBox(15, runButton, stopButton, stepButton, resetButton);
+        HBox buttons = new HBox(10, runButton, stopButton, stepButton, resetButton);
         buttons.setAlignment(Pos.CENTER);
-
-        style(runButton, "#4CAF50", "white");
-        style(stopButton, "#f44336", "white");
-        style(stepButton, "#FFC107", "black");
-        style(resetButton, "#2196F3", "white");
-
-        box.getChildren().addAll(freqBox, buttons);
+        box.getChildren().addAll(new HBox(10, new Label("Hz:"), freqCombo), buttons);
         return box;
     }
 
-    private void style(Button b, String bg, String fg) {
-        b.setStyle(String.format("-fx-background-color: %s; -fx-text-fill: %s;", bg, fg));
-    }
-
-    public void bindHistoryList(ListView<String> list) {
-        this.historyListView = list;
-    }
+    public void bindHistoryList(ListView<String> list) { this.historyListView = list; }
 
     private void start() {
         if (historyListView == null || historyListView.getItems().isEmpty()) return;
-        if (timeline != null && timeline.getStatus() == Timeline.Status.RUNNING) return;
-
+        if (timeline != null) timeline.stop();
         double period = 1000.0 / freqCombo.getValue();
-        timeline = new Timeline(new KeyFrame(Duration.millis(period), e -> next()));
+        timeline = new Timeline(new KeyFrame(Duration.millis(period), e -> executeCycle()));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
         runButton.setDisable(true);
-        stopButton.setDisable(false);
     }
 
     private void pause() {
         if (timeline != null) timeline.pause();
         runButton.setDisable(false);
-        stopButton.setDisable(true);
     }
 
     private void reset() {
         if (timeline != null) timeline.stop();
-        initRegisters();
-        saveState();
-        updateDisplay();
-        highlightCurrent();
+        initRegisters(); saveState(); updateDisplay(); resetColors();
         runButton.setDisable(false);
-        stopButton.setDisable(true);
     }
 
-    private void step() {
-        executeCycle();
-    }
-
-    private void next() {
-        executeCycle();
-    }
+    private void step() { executeCycle(); }
 
     private void executeCycle() {
         if (historyListView == null || historyListView.getItems().isEmpty()) return;
-
         int pc = registers.get("PC");
-        if (pc >= historyListView.getItems().size()) {
-            if (timeline != null) timeline.stop();
-            return;
-        }
+        if (pc < 0 || pc >= historyListView.getItems().size()) { pause(); return; }
 
         jumpedLastInstruction = false;
         saveState();
         execute(historyListView.getItems().get(pc));
+        if (!jumpedLastInstruction) registers.put("PC", pc + 1);
+
         updateDisplay();
-        highlightChangedRegisters();
-        highlightCurrent();
-
-        if (!jumpedLastInstruction)
-            registers.put("PC", pc + 1);
+        highlightChanged();
+        historyListView.getSelectionModel().select(registers.get("PC"));
+        historyListView.scrollTo(registers.get("PC"));
     }
 
-    private void highlightChangedRegisters() {
-        setNormalColor(reg0Label, "0");
-        setNormalColor(regALabel, "A");
-        setNormalColor(regBLabel, "B");
-        setNormalColor(regCLabel, "C");
-        setNormalColor(regDLabel, "D");
-        setNormalColor(regELabel, "E");
-        setNormalColor(outLabel, "OUT");
-        setNormalColor(pcLabel, "PC");
-        setNormalColor(zeroLabel, "ZERO");
+    private void highlightChanged() {
+        regLabels.forEach((name, lbl) -> setLabelColor(lbl, name));
+        setLabelColor(outLabel, "OUT");
+        setLabelColor(pcLabel, "PC");
+        setLabelColor(zeroLabel, "ZERO");
     }
 
-    private void setNormalColor(Label label, String reg) {
-        int oldValue = previousRegisters.get(reg);
-        int newValue = registers.get(reg);
+    private void setLabelColor(Label lbl, String regName) {
+        boolean changed = !registers.get(regName).equals(previousRegisters.get(regName));
+        lbl.setStyle("-fx-text-fill: " + (changed ? COLOR_CHANGED : COLOR_NORMAL) + "; -fx-font-weight: bold;");
+    }
 
-        label.setStyle("-fx-text-fill: black;");
-        if (oldValue != newValue) {
-            label.setStyle("-fx-text-fill: red;");
-        }
+    private void resetColors() {
+        regLabels.values().forEach(l -> l.setStyle("-fx-text-fill: " + COLOR_NORMAL + "; -fx-font-weight: bold;"));
+        outLabel.setStyle("-fx-text-fill: " + COLOR_NORMAL + "; -fx-font-weight: bold;");
+        pcLabel.setStyle("-fx-text-fill: " + COLOR_NORMAL + "; -fx-font-weight: bold;");
+        zeroLabel.setStyle("-fx-text-fill: " + COLOR_NORMAL + "; -fx-font-weight: bold;");
     }
 
     private void updateDisplay() {
-        reg0Label.setText(fmt(registers.get("0")));
-        regALabel.setText(fmt(registers.get("A")));
-        regBLabel.setText(fmt(registers.get("B")));
-        regCLabel.setText(fmt(registers.get("C")));
-        regDLabel.setText(fmt(registers.get("D")));
-        regELabel.setText(fmt(registers.get("E")));
+        regLabels.forEach((name, lbl) -> lbl.setText(fmt(registers.get(name))));
         outLabel.setText(fmt(registers.get("OUT")));
         pcLabel.setText(fmt(registers.get("PC")));
         zeroLabel.setText(String.valueOf(registers.get("ZERO")));
@@ -212,165 +167,85 @@ public class SimulationView extends VBox {
 
     private String fmt(int v) { return String.format("0x%04X", v & 0xFFFF); }
 
-    private void highlightCurrent() {
-        if (historyListView == null) return;
-
-        historyListView.getSelectionModel().clearSelection();
-        int pc = registers.get("PC");
-        if (pc < historyListView.getItems().size()) {
-            historyListView.getSelectionModel().select(pc);
-            historyListView.scrollTo(pc);
-        }
-    }
-
-    // ================= Instrukcje =================
-
-    private static final String[] COMMANDS = {"ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"};
-
     private void execute(String line) {
-        if (line == null || line.isBlank()) return;
+        if (!line.contains(":")) return;
+        String raw = line.substring(line.indexOf(":") + 1).trim();
+        String[] parts = raw.split("[\\s\\->,]+");
+        List<String> tokens = Arrays.stream(parts).filter(s -> !s.isBlank()).collect(Collectors.toList());
+        if (tokens.isEmpty()) return;
 
-        String[] p = line.trim().split("\\s+");
-        int cmdIdx = -1;
-
-        for (int i = 0; i < p.length; i++) {
-            String up = p[i].replace(":", "").toUpperCase();
-            for (String c : COMMANDS)
-                if (up.equals(c)) { cmdIdx = i; break; }
-            if (cmdIdx != -1) break;
-        }
-        if (cmdIdx == -1) return;
-
-        String cmd = p[cmdIdx].toUpperCase();
-        String[] args = Arrays.copyOfRange(p, cmdIdx + 1, p.length);
-
-        switch (cmd) {
-            case "ADD" -> aluOp(args, (a, b) -> a + b);
-            case "SUB" -> aluOp(args, (a, b) -> a - b);
-            case "AND" -> aluOp(args, (a, b) -> a & b);
-            case "OR" -> aluOp(args, (a, b) -> a | b);
-            case "XOR" -> aluOp(args, (a, b) -> a ^ b);
-            case "NOT" -> notOp(args);
-            case "MOV" -> mov(args);
-            case "IN" -> in(args);
-            case "OUT" -> out(args);
-            case "JUMP" -> jump(args);
-            case "JZ" -> jumpIfZero(args);
-            case "NOP" -> {}
-        }
-    }
-
-    private interface AluFunction { int apply(int a, int b); }
-
-    private void aluOp(String[] args, AluFunction op) {
-        int a = registers.get("A");
-        int b = registers.get("B");
-        int result = op.apply(a, b) & 0xFFFF;
-
-        List<String> regs = findRegistersInArgs(args);
-        if (!regs.isEmpty()) {
-            String dst = regs.get(0);
-            if (!dst.equals("0")) registers.put(dst, result);
-        }
-
-        registers.put("ZERO", (result == 0) ? 1 : 0);
-    }
-
-    private void notOp(String[] args) {
-        int a = registers.get("A");
-        int result = (~a) & 0xFFFF;
-
-        List<String> regs = findRegistersInArgs(args);
-        if (!regs.isEmpty()) {
-            String dst = regs.get(0);
-            if (!dst.equals("0")) registers.put(dst, result);
-        }
-        registers.put("ZERO", (result == 0) ? 1 : 0);
-    }
-
-    private void mov(String[] args) {
-        List<String> regs = findRegistersInArgs(args);
-        if (regs.size() < 2) return;
-
-        String src = regs.get(0);
-        String dst = regs.get(1);
-        if (!dst.equals("0"))
-            registers.put(dst, registers.get(src) & 0xFFFF);
-    }
-
-    private List<String> findRegistersInArgs(String[] args) {
-        List<String> regs = new java.util.ArrayList<>();
-        for (String a : args) {
-            a = a.replace(",", "").toUpperCase().replace("REG", "");
-            if (registers.containsKey(a)) regs.add(a);
-        }
-        return regs;
-    }
-
-    private void in(String[] args) {
-        if (args.length < 2) return;  // Jeśli nie mamy co najmniej dwóch argumentów, wychodzimy
-
-        String valueToken = null;  // Token dla wartości HEX
-        String regToken = null;    // Token dla rejestru
-
-        // Iterujemy po argumentach
-        for (String a : args) {
-            if (valueToken == null && a.matches("(?i)^(0x)?[0-9A-F]+$")) {
-                // Jeśli znajdziesz wartość HEX (np. 0x1, 2, A), przypisujemy ją do valueToken
-                valueToken = a;
-                continue;
-            }
-            // Jeśli jest to rejestr
-            if (a.toUpperCase().startsWith("REG") || a.matches("^[A-E]$")) {
-                regToken = a;
-            }
-        }
-
-        // Jeśli mamy zarówno wartość, jak i rejestr, przetwarzamy
-        if (valueToken == null || regToken == null) return;
+        String cmd = tokens.get(0).toUpperCase();
+        List<String> args = tokens.subList(1, tokens.size());
 
         try {
-            // Parsujemy wartość HEX (usuń ewentualny prefiks "0x")
-            int val = Integer.parseInt(valueToken.replaceFirst("(?i)0x", ""), 16) & 0xFFFF;
-            // Przekształcamy rejestr na format (np. REG A -> A)
-            String reg = regToken.replace("REG", "").trim().toUpperCase();
-
-            // Jeśli rejestr jest poprawny, zapisujemy wartość do rejestru
-            if (registers.containsKey(reg) && !reg.equals("0")) {
-                registers.put(reg, val);
+            switch (cmd) {
+                case "ADD" -> alu(args, Integer::sum);
+                case "SUB" -> alu(args, (a, b) -> a - b);
+                case "AND" -> alu(args, (a, b) -> a & b);
+                case "OR"  -> alu(args, (a, b) -> a | b);
+                case "XOR" -> alu(args, (a, b) -> a ^ b);
+                case "NOT" -> applyResult(args, (~registers.get("A")) & 0xFFFF);
+                case "MOV" -> {
+                    List<String> rs = findRegs(args);
+                    if (rs.size() >= 2) registers.put(rs.get(1), registers.get(rs.get(0)));
+                }
+                case "IN" -> {
+                    int val = 0; String target = null;
+                    boolean valFound = false;
+                    for (int i = 0; i < args.size(); i++) {
+                        String a = args.get(i).toUpperCase();
+                        if (!valFound && a.matches("(?i)^(0x)?[0-9A-F]+$")) {
+                            val = Integer.parseInt(a.replaceFirst("(?i)0x", ""), 16);
+                            valFound = true;
+                        } else if (a.equals("REG") && i + 1 < args.size()) {
+                            target = args.get(i + 1).toUpperCase();
+                            i++;
+                        } else if (registers.containsKey(a)) {
+                            target = a;
+                        }
+                    }
+                    if (target != null && !target.equals("0")) registers.put(target, val & 0xFFFF);
+                }
+                case "OUT" -> {
+                    List<String> rs = findRegs(args);
+                    if (!rs.isEmpty()) registers.put("OUT", registers.get(rs.get(0)));
+                }
+                case "JUMP" -> { jumpedLastInstruction = true; registers.put("PC", getJumpVal(args)); }
+                case "JZ" -> { if (registers.get("ZERO") == 1) { jumpedLastInstruction = true; registers.put("PC", getJumpVal(args)); } }
             }
-        } catch (NumberFormatException ignored) {
-            // W przypadku błędu parsowania HEX (np. niepoprawny format) ignorujemy
+        } catch (Exception ignored) {}
+    }
+
+    private void alu(List<String> args, java.util.function.BinaryOperator<Integer> op) {
+        int res = op.apply(registers.get("A"), registers.get("B")) & 0xFFFF;
+        registers.put("ZERO", res == 0 ? 1 : 0);
+        applyResult(args, res);
+    }
+
+    private void applyResult(List<String> args, int val) {
+        List<String> rs = findRegs(args);
+        if (!rs.isEmpty()) {
+            String target = rs.get(rs.size() - 1);
+            if (!target.equals("0")) registers.put(target, val);
         }
     }
 
-
-    private void out(String[] args) {
-        List<String> regs = findRegistersInArgs(args);
-        if (regs.isEmpty()) return;
-
-        String src = regs.get(0);
-        registers.put("OUT", registers.get(src));
-        registers.put("ZERO", (registers.get("OUT") == 0) ? 1 : 0);
+    private List<String> findRegs(List<String> args) {
+        List<String> found = new ArrayList<>();
+        for (int i = 0; i < args.size(); i++) {
+            String a = args.get(i).toUpperCase();
+            if (a.equals("REG") && i + 1 < args.size()) {
+                String next = args.get(i + 1).toUpperCase();
+                if (registers.containsKey(next)) { found.add(next); i++; }
+            } else if (registers.containsKey(a)) {
+                found.add(a);
+            }
+        }
+        return found;
     }
 
-    private void jump(String[] args) {
-        jumpedLastInstruction = true;
-        int target = extractJumpValue(args);
-        registers.put("PC", target);
-    }
-
-    private void jumpIfZero(String[] args) {
-        if (registers.get("ZERO") != 1) return;
-        jumpedLastInstruction = true;
-        int target = extractJumpValue(args);
-        registers.put("PC", target);
-    }
-
-    private int extractJumpValue(String[] args) {
-        try {
-            String cleaned = args[args.length - 1].replaceAll("[^0-9A-Fa-f]", "");
-            return Integer.parseInt(cleaned, 16);
-        } catch (Exception e) { return registers.get("PC"); }
+    private int getJumpVal(List<String> args) {
+        for (String a : args) if (a.matches("(?i)^(0x)?[0-9A-F]+$")) return Integer.parseInt(a.replaceFirst("(?i)0x", ""), 16);
+        return registers.get("PC");
     }
 }
