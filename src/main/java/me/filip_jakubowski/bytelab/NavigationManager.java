@@ -3,7 +3,6 @@ package me.filip_jakubowski.bytelab;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
-
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
 import me.filip_jakubowski.bytelab.view.DiagramView;
 import me.filip_jakubowski.bytelab.view.SimulationView;
@@ -26,7 +25,6 @@ public class NavigationManager {
     public void showEducationMenu() {
         me.filip_jakubowski.bytelab.education.EducationMenuView view =
                 new me.filip_jakubowski.bytelab.education.EducationMenuView();
-
         stage.setScene(new Scene(view, 900, 600));
         stage.show();
     }
@@ -34,60 +32,44 @@ public class NavigationManager {
     public void showLesson(int id) {
         me.filip_jakubowski.bytelab.education.LessonView view =
                 new me.filip_jakubowski.bytelab.education.LessonView(id);
-
         stage.setScene(new Scene(view, 900, 600));
         stage.show();
     }
 
     public void showEmulator() {
-
-        CommandSearchView commandSearchView = new CommandSearchView();
+        CommandSearchView commandSearchView = new CommandSearchView(this);
         SimulationView simulationView = new SimulationView();
 
         BorderPane root = new BorderPane();
-        Scene scene = new Scene(root, 1000, 700);
+        Scene scene = new Scene(root, 1100, 750);
 
-        DiagramView diagramView = new DiagramView(scene);
         simulationView.bindHistoryList(commandSearchView.getCompletedCommandsListView());
 
-        commandSearchView.setMinHeight(150);
-        commandSearchView.setPrefHeight(250);
-        commandSearchView.setMaxHeight(500);
+        commandSearchView.setPrefWidth(450);
 
-        root.setLeft(diagramView);
+        root.setLeft(commandSearchView);
         root.setCenter(simulationView);
-        root.setBottom(commandSearchView);
 
-        commandSearchView.setOnMousePressed(event -> {
-            yOffset = event.getSceneY();
-            initialHeight = commandSearchView.getHeight();
-        });
-
-        commandSearchView.setOnMouseDragged(event -> {
-            double deltaY = event.getSceneY() - yOffset;
-            double newHeight = initialHeight - deltaY;
-            if (newHeight >= 150 && newHeight <= 500) {
-                commandSearchView.setPrefHeight(newHeight);
-            }
-        });
-
-        commandSearchView.setOnMouseMoved(event -> {
-            double border = 5;
-            if (event.getY() < border) {
-                commandSearchView.setCursor(javafx.scene.Cursor.N_RESIZE);
-            } else {
-                commandSearchView.setCursor(javafx.scene.Cursor.DEFAULT);
-            }
-        });
-
-        scene.getStylesheets().add(
-                getClass().getResource("/me/filip_jakubowski/bytelab/styles.css").toExternalForm()
-        );
+        if (getClass().getResource("/me/filip_jakubowski/bytelab/styles.css") != null) {
+            scene.getStylesheets().add(getClass().getResource("/me/filip_jakubowski/bytelab/styles.css").toExternalForm());
+        }
 
         stage.setScene(scene);
+        stage.centerOnScreen();
         stage.show();
     }
 
-    private double yOffset = 0;
-    private double initialHeight = 0;
+    public void openDiagramWindow() {
+        Stage diagramStage = new Stage();
+        diagramStage.setTitle("Schemat blokowy procesora");
+
+        BorderPane root = new BorderPane();
+        Scene scene = new Scene(root, 800, 600);
+
+        DiagramView diagramView = new DiagramView(scene);
+        root.setCenter(diagramView);
+
+        diagramStage.setScene(scene);
+        diagramStage.show();
+    }
 }

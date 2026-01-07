@@ -1,13 +1,13 @@
 package me.filip_jakubowski.bytelab.view;
 
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import me.filip_jakubowski.bytelab.NavigationManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +32,7 @@ public class CommandSearchView extends VBox {
     private final Button saveButton = new Button("Zapisz");
     private final Button loadButton = new Button("Wczytaj");
     private final Button clearButton = new Button("Wyczyść");
+    private final Button schemaButton = new Button("Schemat");
     private final Button deleteSelectedButton = new Button("Usuń wybrane");
     private final Button insertAtButton = new Button("Wstaw pod adres (HEX)");
 
@@ -39,8 +40,10 @@ public class CommandSearchView extends VBox {
     private Stage currentStage = Stage.INSTRUCTION;
 
     private String selectedInstruction, selectedData, selectedTarget;
+    private final NavigationManager navigationManager;
 
-    public CommandSearchView() {
+    public CommandSearchView(NavigationManager navigationManager) {
+        this.navigationManager = navigationManager;
         setSpacing(8);
         setPadding(new Insets(10));
         setupInstructionMaps();
@@ -50,11 +53,12 @@ public class CommandSearchView extends VBox {
         addressField.setPrefWidth(150);
 
         suggestionsList.setPrefHeight(120);
-        completedCommands.setPrefHeight(200);
+        completedCommands.setPrefHeight(300);
         suggestionsList.setItems(FXCollections.observableArrayList(instructions));
 
         HBox addressBox = new HBox(5, addressField, insertAtButton);
-        HBox controlButtons = new HBox(5, saveButton, loadButton, deleteSelectedButton, clearButton);
+        HBox row1 = new HBox(5, saveButton, loadButton, clearButton, schemaButton);
+        HBox row2 = new HBox(5, deleteSelectedButton);
 
         getChildren().addAll(
                 new Label("Kreator instrukcji:"),
@@ -64,7 +68,7 @@ public class CommandSearchView extends VBox {
                 addressBox,
                 new Label("Program:"),
                 completedCommands,
-                controlButtons
+                new VBox(5, row1, row2)
         );
 
         setupListeners();
@@ -100,36 +104,26 @@ public class CommandSearchView extends VBox {
             }
         });
 
-        suggestionsList.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.ENTER) {
-                handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
-            }
-        });
-
         suggestionsList.setOnMouseClicked(e -> {
-            if (e.getClickCount() == 2) {
-                handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
-            }
+            if (e.getClickCount() == 2) handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
         });
 
         saveButton.setOnAction(e -> saveToFile());
         loadButton.setOnAction(e -> loadFromFile());
         clearButton.setOnAction(e -> clearAll());
         deleteSelectedButton.setOnAction(e -> deleteSelected());
+        schemaButton.setOnAction(e -> navigationManager.openDiagramWindow());
 
         insertAtButton.setOnAction(e -> {
             if (currentStage != Stage.INSTRUCTION) {
                 handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
             }
-            if (selectedInstruction != null) {
-                finalizeCommand();
-            }
+            if (selectedInstruction != null) finalizeCommand();
         });
     }
 
     private void handleSelection(String selection) {
         String manualInput = inputField.getText().trim();
-
         if (currentStage == Stage.INSTRUCTION) {
             if (selection == null) return;
             selectedInstruction = selection;
@@ -140,8 +134,7 @@ public class CommandSearchView extends VBox {
             }
             currentStage = Stage.DATA;
             prepareNextStage();
-        }
-        else if (currentStage == Stage.DATA) {
+        } else if (currentStage == Stage.DATA) {
             if ("IN".equals(selectedInstruction)) {
                 if (validateHex(manualInput)) {
                     selectedData = manualInput.toUpperCase();
@@ -154,8 +147,7 @@ public class CommandSearchView extends VBox {
                 currentStage = Stage.TARGET;
                 prepareNextStage();
             }
-        }
-        else if (currentStage == Stage.TARGET) {
+        } else if (currentStage == Stage.TARGET) {
             if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
                 if (validateHex(manualInput)) {
                     selectedTarget = manualInput.toUpperCase();
@@ -182,41 +174,52 @@ public class CommandSearchView extends VBox {
     private void finalizeCommand() {
         String cmdBody = String.format("%s %s -> %s", selectedInstruction, selectedData, selectedTarget);
         String addrRaw = addressField.getText().trim();
-        ObservableList<String> items = completedCommands.getItems();
-
         if (!addrRaw.isEmpty() && validateHex(addrRaw)) {
             int targetIdx = Integer.parseInt(addrRaw.replaceFirst("(?i)0x", ""), 16);
-            if (targetIdx < items.size()) {
-                items.add(targetIdx, cmdBody);
+            if (targetIdx < completedCommands.getItems().size()) {
+                completedCommands.getItems().add(targetIdx, cmdBody);
             } else {
-                while (items.size() < targetIdx) {
-                    items.add("NOP ----- -> -----");
-                }
-                items.add(cmdBody);
+                while (completedCommands.getItems().size() < targetIdx) completedCommands.getItems().add("NOP ----- -> -----");
+                completedCommands.getItems().add(cmdBody);
             }
         } else {
-            items.add(cmdBody);
+            completedCommands.getItems().add(cmdBody);
         }
-
         reindexCommands();
         addressField.clear();
         clearSelection();
     }
 
     private void reindexCommands() {
-        ObservableList<String> items = completedCommands.getItems();
         List<String> reindexed = new ArrayList<>();
-        for (int i = 0; i < items.size(); i++) {
-            String line = items.get(i);
+        for (int i = 0; i < completedCommands.getItems().size(); i++) {
+            String line = completedCommands.getItems().get(i);
             String content = line.contains(":") ? line.substring(line.indexOf(":") + 1).trim() : line;
             reindexed.add(String.format("0x%04X: %s", i, content));
         }
         completedCommands.getItems().setAll(reindexed);
     }
 
+    private void clearSelection() {
+        currentStage = Stage.INSTRUCTION;
+        inputField.clear();
+        inputField.setPromptText("Wpisz instrukcję...");
+        suggestionsList.setItems(FXCollections.observableArrayList(instructions));
+        selectedInstruction = selectedData = selectedTarget = null;
+    }
+
+    private void clearAll() {
+        clearSelection();
+        completedCommands.getItems().clear();
+    }
+
+    private void deleteSelected() {
+        int idx = completedCommands.getSelectionModel().getSelectedIndex();
+        if (idx >= 0) { completedCommands.getItems().remove(idx); reindexCommands(); }
+    }
+
     private void saveToFile() {
         FileChooser fc = new FileChooser();
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("ByteLab (*.txt)", "*.txt"));
         File file = fc.showSaveDialog(getScene().getWindow());
         if (file != null) {
             try {
@@ -240,40 +243,12 @@ public class CommandSearchView extends VBox {
         }
     }
 
-    private void deleteSelected() {
-        int idx = completedCommands.getSelectionModel().getSelectedIndex();
-        if (idx >= 0) {
-            completedCommands.getItems().remove(idx);
-            reindexCommands();
-        }
-    }
-
-    private void clearSelection() {
-        currentStage = Stage.INSTRUCTION;
-        inputField.clear();
-        inputField.setPromptText("Wpisz instrukcję...");
-        suggestionsList.setItems(FXCollections.observableArrayList(instructions));
-        suggestionsList.getSelectionModel().selectFirst();
-        selectedInstruction = selectedData = selectedTarget = null;
-        inputField.requestFocus();
-    }
-
-    private void clearAll() {
-        clearSelection();
-        completedCommands.getItems().clear();
-    }
-
-    private boolean validateHex(String hex) {
-        return hex != null && hex.matches("(?i)^(0x)?[0-9A-F]{1,4}$");
-    }
-
+    private boolean validateHex(String hex) { return hex != null && hex.matches("(?i)^(0x)?[0-9A-F]{1,4}$"); }
     private void updateSuggestions(String text) {
         List<String> filtered = instructions.stream()
                 .filter(i -> i.startsWith(text.toUpperCase()))
                 .collect(Collectors.toList());
         suggestionsList.setItems(FXCollections.observableArrayList(filtered));
-        suggestionsList.getSelectionModel().selectFirst();
     }
-
     public ListView<String> getCompletedCommandsListView() { return completedCommands; }
 }

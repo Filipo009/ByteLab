@@ -8,32 +8,24 @@ import javafx.scene.Scene;
 
 public class DiagramView extends StackPane {
 
-    private final ImageView imageView;
-
     public DiagramView(Scene scene) {
-        setStyle("-fx-background-color: #e6f0ff; -fx-padding: 10;");
-
-        ImageView tempView = null;
+        setStyle("-fx-background-color: #f4f4f4; -fx-padding: 20;");
 
         try {
             Image image = new Image(
                     getClass().getResourceAsStream("/me/filip_jakubowski/bytelab/schemat.png")
             );
 
-            tempView = new ImageView(image);
-            tempView.setPreserveRatio(true);
+            ImageView imageView = new ImageView(image);
+            imageView.setPreserveRatio(true);
 
-            // skalowanie względem całego okna – 60% jego rozmiaru
-            tempView.fitWidthProperty().bind(scene.widthProperty().multiply(0.6));
-            tempView.fitHeightProperty().bind(scene.heightProperty().multiply(0.6));
+            imageView.fitWidthProperty().bind(scene.widthProperty().subtract(40));
+            imageView.fitHeightProperty().bind(scene.heightProperty().subtract(40));
 
-            getChildren().add(tempView);
+            getChildren().add(imageView);
 
         } catch (Exception e) {
-            getChildren().add(new Label("Nie znaleziono pliku schemat.png"));
-            e.printStackTrace();
+            getChildren().add(new Label("Błąd: Nie znaleziono pliku /me/filip_jakubowski/bytelab/schemat.png"));
         }
-
-        imageView = tempView;
     }
 }
