@@ -1,6 +1,8 @@
 package me.filip_jakubowski.bytelab;
 
 import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
@@ -40,15 +42,19 @@ public class NavigationManager {
         CommandSearchView commandSearchView = new CommandSearchView(this);
         SimulationView simulationView = new SimulationView();
 
-        BorderPane root = new BorderPane();
-        Scene scene = new Scene(root, 1100, 750);
+        HBox root = new HBox();
+        Scene scene = new Scene(root, 1200, 800);
 
         simulationView.bindHistoryList(commandSearchView.getCompletedCommandsListView());
 
-        commandSearchView.setPrefWidth(450);
+        // Proporcje 50/50
+        commandSearchView.prefWidthProperty().bind(root.widthProperty().multiply(0.5));
+        simulationView.prefWidthProperty().bind(root.widthProperty().multiply(0.5));
 
-        root.setLeft(commandSearchView);
-        root.setCenter(simulationView);
+        HBox.setHgrow(commandSearchView, Priority.ALWAYS);
+        HBox.setHgrow(simulationView, Priority.ALWAYS);
+
+        root.getChildren().addAll(commandSearchView, simulationView);
 
         if (getClass().getResource("/me/filip_jakubowski/bytelab/styles.css") != null) {
             scene.getStylesheets().add(getClass().getResource("/me/filip_jakubowski/bytelab/styles.css").toExternalForm());

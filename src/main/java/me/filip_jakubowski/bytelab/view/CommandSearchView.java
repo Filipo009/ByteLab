@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import me.filip_jakubowski.bytelab.NavigationManager;
@@ -17,10 +18,7 @@ import java.util.stream.Collectors;
 
 public class CommandSearchView extends VBox {
 
-    private final List<String> instructions = List.of(
-            "ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP"
-    );
-
+    private final List<String> instructions = List.of("ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP");
     private final Map<String, List<String>> dataRegisters = new HashMap<>();
     private final Map<String, List<String>> targetRegisters = new HashMap<>();
 
@@ -33,42 +31,41 @@ public class CommandSearchView extends VBox {
     private final Button loadButton = new Button("Wczytaj");
     private final Button clearButton = new Button("Wyczyść");
     private final Button schemaButton = new Button("Schemat");
-    private final Button deleteSelectedButton = new Button("Usuń wybrane");
-    private final Button insertAtButton = new Button("Wstaw pod adres (HEX)");
+    private final Button deleteSelectedButton = new Button("Usuń");
+    private final Button insertAtButton = new Button("Wstaw (HEX)");
 
     private enum Stage { INSTRUCTION, DATA, TARGET }
     private Stage currentStage = Stage.INSTRUCTION;
-
     private String selectedInstruction, selectedData, selectedTarget;
     private final NavigationManager navigationManager;
 
     public CommandSearchView(NavigationManager navigationManager) {
         this.navigationManager = navigationManager;
-        setSpacing(8);
-        setPadding(new Insets(10));
+        setSpacing(10);
+        setPadding(new Insets(15));
         setupInstructionMaps();
 
         inputField.setPromptText("Wpisz instrukcję...");
-        addressField.setPromptText("Adres HEX (np. 0x05)");
-        addressField.setPrefWidth(150);
+        addressField.setPromptText("Adres HEX");
+        addressField.setPrefWidth(100);
 
         suggestionsList.setPrefHeight(120);
-        completedCommands.setPrefHeight(300);
         suggestionsList.setItems(FXCollections.observableArrayList(instructions));
 
-        HBox addressBox = new HBox(5, addressField, insertAtButton);
-        HBox row1 = new HBox(5, saveButton, loadButton, clearButton, schemaButton);
-        HBox row2 = new HBox(5, deleteSelectedButton);
+        VBox.setVgrow(completedCommands, Priority.ALWAYS);
+
+        HBox addressRow = new HBox(5, new Label("Adres:"), addressField, insertAtButton);
+        HBox actionButtons = new HBox(5, saveButton, loadButton, clearButton, deleteSelectedButton, schemaButton);
+
+        VBox bottomContainer = new VBox(10, addressRow, actionButtons);
 
         getChildren().addAll(
                 new Label("Kreator instrukcji:"),
                 inputField,
                 suggestionsList,
-                new Label("Opcje wstawiania:"),
-                addressBox,
-                new Label("Program:"),
+                new Label("Pamięć programu:"),
                 completedCommands,
-                new VBox(5, row1, row2)
+                bottomContainer
         );
 
         setupListeners();
@@ -104,16 +101,24 @@ public class CommandSearchView extends VBox {
             }
         });
 
+        suggestionsList.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
+            }
+        });
+
         suggestionsList.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
         });
 
         saveButton.setOnAction(e -> saveToFile());
         loadButton.setOnAction(e -> loadFromFile());
-        clearButton.setOnAction(e -> clearAll());
-        deleteSelectedButton.setOnAction(e -> deleteSelected());
+        clearButton.setOnAction(e -> { completedCommands.getItems().clear(); clearSelection(); });
+        deleteSelectedButton.setOnAction(e -> {
+            int i = completedCommands.getSelectionModel().getSelectedIndex();
+            if(i >= 0) { completedCommands.getItems().remove(i); reindexCommands(); }
+        });
         schemaButton.setOnAction(e -> navigationManager.openDiagramWindow());
-
         insertAtButton.setOnAction(e -> {
             if (currentStage != Stage.INSTRUCTION) {
                 handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
@@ -124,10 +129,11 @@ public class CommandSearchView extends VBox {
 
     private void handleSelection(String selection) {
         String manualInput = inputField.getText().trim();
+        if (selection == null && manualInput.isEmpty()) return;
+
         if (currentStage == Stage.INSTRUCTION) {
-            if (selection == null) return;
             selectedInstruction = selection;
-            if (selection.equals("NOP")) {
+            if ("NOP".equals(selectedInstruction)) {
                 selectedData = "-----"; selectedTarget = "-----";
                 finalizeCommand();
                 return;
@@ -137,24 +143,22 @@ public class CommandSearchView extends VBox {
         } else if (currentStage == Stage.DATA) {
             if ("IN".equals(selectedInstruction)) {
                 if (validateHex(manualInput)) {
-                    selectedData = manualInput.toUpperCase();
+                    selectedData = (manualInput.startsWith("0x") ? "" : "0x") + manualInput.toUpperCase();
                     currentStage = Stage.TARGET;
                     prepareNextStage();
                 }
             } else {
-                if (selection == null) return;
                 selectedData = selection;
                 currentStage = Stage.TARGET;
                 prepareNextStage();
             }
-        } else if (currentStage == Stage.TARGET) {
+        } else {
             if ("JUMP".equals(selectedInstruction) || "JZ".equals(selectedInstruction)) {
                 if (validateHex(manualInput)) {
-                    selectedTarget = manualInput.toUpperCase();
+                    selectedTarget = (manualInput.startsWith("0x") ? "" : "0x") + manualInput.toUpperCase();
                     finalizeCommand();
                 }
             } else {
-                if (selection == null) return;
                 selectedTarget = selection;
                 finalizeCommand();
             }
@@ -163,28 +167,34 @@ public class CommandSearchView extends VBox {
 
     private void prepareNextStage() {
         inputField.clear();
-        List<String> nextItems = (currentStage == Stage.DATA) ?
-                dataRegisters.get(selectedInstruction) : targetRegisters.get(selectedInstruction);
+        List<String> nextItems = (currentStage == Stage.DATA) ? dataRegisters.get(selectedInstruction) : targetRegisters.get(selectedInstruction);
         suggestionsList.setItems(FXCollections.observableArrayList(nextItems));
         suggestionsList.getSelectionModel().selectFirst();
-        inputField.setPromptText((currentStage == Stage.DATA) ? "Wybierz dane..." : "Wybierz cel...");
+        inputField.setPromptText(currentStage == Stage.DATA ? "Wybierz dane..." : "Wybierz cel...");
         inputField.requestFocus();
     }
 
     private void finalizeCommand() {
         String cmdBody = String.format("%s %s -> %s", selectedInstruction, selectedData, selectedTarget);
         String addrRaw = addressField.getText().trim();
+
         if (!addrRaw.isEmpty() && validateHex(addrRaw)) {
             int targetIdx = Integer.parseInt(addrRaw.replaceFirst("(?i)0x", ""), 16);
-            if (targetIdx < completedCommands.getItems().size()) {
+
+            // Jeśli adres jest poza obecną listą, uzupełnij NOP-ami
+            while (completedCommands.getItems().size() < targetIdx) {
+                completedCommands.getItems().add("NOP ----- -> -----");
+            }
+
+            // WSTAWIANIE zamiast nadpisywania (używamy add(index, element))
+            if (targetIdx <= completedCommands.getItems().size()) {
                 completedCommands.getItems().add(targetIdx, cmdBody);
-            } else {
-                while (completedCommands.getItems().size() < targetIdx) completedCommands.getItems().add("NOP ----- -> -----");
-                completedCommands.getItems().add(cmdBody);
             }
         } else {
+            // Standardowe dodawanie na koniec
             completedCommands.getItems().add(cmdBody);
         }
+
         reindexCommands();
         addressField.clear();
         clearSelection();
@@ -194,6 +204,7 @@ public class CommandSearchView extends VBox {
         List<String> reindexed = new ArrayList<>();
         for (int i = 0; i < completedCommands.getItems().size(); i++) {
             String line = completedCommands.getItems().get(i);
+            // Wyciągamy samą treść komendy bez starego adresu 0xXXXX
             String content = line.contains(":") ? line.substring(line.indexOf(":") + 1).trim() : line;
             reindexed.add(String.format("0x%04X: %s", i, content));
         }
@@ -205,38 +216,30 @@ public class CommandSearchView extends VBox {
         inputField.clear();
         inputField.setPromptText("Wpisz instrukcję...");
         suggestionsList.setItems(FXCollections.observableArrayList(instructions));
+        suggestionsList.getSelectionModel().selectFirst();
         selectedInstruction = selectedData = selectedTarget = null;
-    }
-
-    private void clearAll() {
-        clearSelection();
-        completedCommands.getItems().clear();
-    }
-
-    private void deleteSelected() {
-        int idx = completedCommands.getSelectionModel().getSelectedIndex();
-        if (idx >= 0) { completedCommands.getItems().remove(idx); reindexCommands(); }
     }
 
     private void saveToFile() {
         FileChooser fc = new FileChooser();
-        File file = fc.showSaveDialog(getScene().getWindow());
-        if (file != null) {
+        File f = fc.showSaveDialog(getScene().getWindow());
+        if (f != null) {
             try {
-                List<String> lines = completedCommands.getItems().stream()
-                        .map(s -> s.substring(s.indexOf(":") + 1).trim())
+                // Zapisujemy czyste instrukcje bez prefiksów 0x...:
+                List<String> toSave = completedCommands.getItems().stream()
+                        .map(s -> s.contains(":") ? s.substring(s.indexOf(":") + 1).trim() : s)
                         .collect(Collectors.toList());
-                Files.write(file.toPath(), lines);
+                Files.write(f.toPath(), toSave);
             } catch (IOException ignored) {}
         }
     }
 
     private void loadFromFile() {
         FileChooser fc = new FileChooser();
-        File file = fc.showOpenDialog(getScene().getWindow());
-        if (file != null) {
+        File f = fc.showOpenDialog(getScene().getWindow());
+        if (f != null) {
             try {
-                List<String> lines = Files.readAllLines(file.toPath());
+                List<String> lines = Files.readAllLines(f.toPath());
                 completedCommands.getItems().setAll(lines);
                 reindexCommands();
             } catch (IOException ignored) {}
@@ -244,11 +247,14 @@ public class CommandSearchView extends VBox {
     }
 
     private boolean validateHex(String hex) { return hex != null && hex.matches("(?i)^(0x)?[0-9A-F]{1,4}$"); }
+
     private void updateSuggestions(String text) {
         List<String> filtered = instructions.stream()
                 .filter(i -> i.startsWith(text.toUpperCase()))
                 .collect(Collectors.toList());
         suggestionsList.setItems(FXCollections.observableArrayList(filtered));
+        if (!filtered.isEmpty()) suggestionsList.getSelectionModel().selectFirst();
     }
+
     public ListView<String> getCompletedCommandsListView() { return completedCommands; }
 }
