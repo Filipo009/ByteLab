@@ -17,13 +17,16 @@ public class StartView extends VBox {
 
         Button emulatorButton = new Button("Uruchom Emulator");
         Button educationButton = new Button("Tryb Edukacyjny");
+        Button gameButton = new Button("Logiczne Kółko i Krzyżyk");
 
-        emulatorButton.setPrefWidth(200);
-        educationButton.setPrefWidth(200);
+        emulatorButton.setPrefWidth(220);
+        educationButton.setPrefWidth(220);
+        gameButton.setPrefWidth(220);
 
         emulatorButton.setOnAction(e -> MainApp.getNavigationManager().showEmulator());
         educationButton.setOnAction(e -> MainApp.getNavigationManager().showEducationMenu());
+        gameButton.setOnAction(e -> MainApp.getNavigationManager().showLogicGame());
 
-        getChildren().addAll(title, emulatorButton, educationButton);
+        getChildren().addAll(title, emulatorButton, educationButton, gameButton);
     }
 }

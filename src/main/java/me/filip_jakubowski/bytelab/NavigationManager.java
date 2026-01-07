@@ -8,6 +8,7 @@ import javafx.stage.Stage;
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
 import me.filip_jakubowski.bytelab.view.DiagramView;
 import me.filip_jakubowski.bytelab.view.SimulationView;
+import me.filip_jakubowski.bytelab.logicgame.LogicGameView;
 
 public class NavigationManager {
 
@@ -20,7 +21,7 @@ public class NavigationManager {
 
     public void showStartScreen() {
         StartView view = new StartView();
-        stage.setScene(new Scene(view, 600, 400));
+        stage.setScene(new Scene(view, 600, 450));
         stage.show();
     }
 
@@ -47,7 +48,6 @@ public class NavigationManager {
 
         simulationView.bindHistoryList(commandSearchView.getCompletedCommandsListView());
 
-        // Proporcje 50/50
         commandSearchView.prefWidthProperty().bind(root.widthProperty().multiply(0.5));
         simulationView.prefWidthProperty().bind(root.widthProperty().multiply(0.5));
 
@@ -65,16 +65,24 @@ public class NavigationManager {
         stage.show();
     }
 
+    public void showLogicGame() {
+        LogicGameView view = new LogicGameView();
+        Scene scene = new Scene(view, 1000, 750);
+        if (getClass().getResource("/me/filip_jakubowski/bytelab/styles.css") != null) {
+            scene.getStylesheets().add(getClass().getResource("/me/filip_jakubowski/bytelab/styles.css").toExternalForm());
+        }
+        stage.setScene(scene);
+        stage.centerOnScreen();
+        stage.show();
+    }
+
     public void openDiagramWindow() {
         Stage diagramStage = new Stage();
         diagramStage.setTitle("Schemat blokowy procesora");
-
         BorderPane root = new BorderPane();
         Scene scene = new Scene(root, 800, 600);
-
         DiagramView diagramView = new DiagramView(scene);
         root.setCenter(diagramView);
-
         diagramStage.setScene(scene);
         diagramStage.show();
     }
