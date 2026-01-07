@@ -95,7 +95,7 @@ public class SimulationView extends VBox {
         VBox box = new VBox(15);
         box.setAlignment(Pos.CENTER);
 
-        freqCombo.getItems().addAll(1, 2, 4, 8, 16, 32, 64);
+        freqCombo.getItems().addAll(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192);
         freqCombo.setValue(4);
 
         HBox hzBox = new HBox(10, new Label("Częstotliwość (Hz):"), freqCombo);
