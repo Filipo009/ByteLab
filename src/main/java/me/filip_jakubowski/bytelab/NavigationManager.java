@@ -21,7 +21,14 @@ public class NavigationManager {
 
     public void showStartScreen() {
         StartView view = new StartView();
-        stage.setScene(new Scene(view, 600, 450));
+        Scene scene = new Scene(view, 600, 450);
+
+        // To jest kluczowy fragment:
+        if (getClass().getResource("/me/filip_jakubowski/bytelab/styles.css") != null) {
+            scene.getStylesheets().add(getClass().getResource("/me/filip_jakubowski/bytelab/styles.css").toExternalForm());
+        }
+
+        stage.setScene(scene);
         stage.show();
     }
 
@@ -78,7 +85,7 @@ public class NavigationManager {
 
     public void openDiagramWindow() {
         Stage diagramStage = new Stage();
-        diagramStage.setTitle("Schemat blokowy procesora");
+        diagramStage.setTitle("Uproszczony układ komputera");
         BorderPane root = new BorderPane();
         Scene scene = new Scene(root, 800, 600);
         DiagramView diagramView = new DiagramView(scene);

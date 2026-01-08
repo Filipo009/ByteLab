@@ -9,24 +9,43 @@ import javafx.scene.text.Text;
 public class StartView extends VBox {
 
     public StartView() {
-        setSpacing(25);
+        // Główny kontener
+        setSpacing(30);
         setAlignment(Pos.CENTER);
 
-        Text title = new Text("Witaj w ByteLab");
-        title.setFont(Font.font(32));
+        // Nagłówek
+        VBox header = new VBox(5);
+        header.setAlignment(Pos.CENTER);
 
-        Button educationButton = new Button("Teoria + instrukcja obsługi");
-        Button gameButton = new Button("0 vs 1");
+        Text title = new Text("ByteLab");
+        title.setFont(Font.font("Consolas", 50));
+        title.setStyle("-fx-fill: #007acc; -fx-font-weight: bold;"); // Kolor akcentu z Twojego CSS
+
+        Text subtitle = new Text("Komputer od zera do program countera");
+        subtitle.setStyle("-fx-fill: #666666; -fx-font-size: 14px;");
+
+        header.getChildren().addAll(title, subtitle);
+
+        // Przyciski
+        VBox buttons = new VBox(15);
+        buttons.setAlignment(Pos.CENTER);
+
         Button emulatorButton = new Button("Uruchom Emulator");
+        Button educationButton = new Button("Teoria + Instrukcja");
+        Button gameButton = new Button("Gra: 0 vs 1");
 
-        emulatorButton.setPrefWidth(220);
-        educationButton.setPrefWidth(220);
-        gameButton.setPrefWidth(220);
+        // Szerokość przycisków
+        double btnWidth = 250;
+        emulatorButton.setPrefWidth(btnWidth);
+        educationButton.setPrefWidth(btnWidth);
+        gameButton.setPrefWidth(btnWidth);
 
+        // Nawigacja
         emulatorButton.setOnAction(e -> MainApp.getNavigationManager().showEmulator());
         educationButton.setOnAction(e -> MainApp.getNavigationManager().showEducationMenu());
         gameButton.setOnAction(e -> MainApp.getNavigationManager().showLogicGame());
 
-        getChildren().addAll(title, emulatorButton, educationButton, gameButton);
+        buttons.getChildren().addAll(emulatorButton, educationButton, gameButton);
+        getChildren().addAll(header, buttons);
     }
 }

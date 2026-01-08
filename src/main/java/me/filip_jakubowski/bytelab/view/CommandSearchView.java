@@ -31,6 +31,7 @@ public class CommandSearchView extends VBox {
     private final Button loadButton = new Button("Wczytaj");
     private final Button clearButton = new Button("Wyczyść");
     private final Button schemaButton = new Button("Schemat");
+    private final Button menuButton = new Button("Menu"); // Nowy przycisk
     private final Button deleteSelectedButton = new Button("Usuń");
     private final Button insertAtButton = new Button("Wstaw (HEX)");
 
@@ -55,7 +56,8 @@ public class CommandSearchView extends VBox {
         VBox.setVgrow(completedCommands, Priority.ALWAYS);
 
         HBox addressRow = new HBox(5, new Label("Adres:"), addressField, insertAtButton);
-        HBox actionButtons = new HBox(5, saveButton, loadButton, clearButton, deleteSelectedButton, schemaButton);
+        // Dodano menuButton do listy poniżej:
+        HBox actionButtons = new HBox(5, saveButton, loadButton, clearButton, deleteSelectedButton, schemaButton, menuButton);
 
         VBox bottomContainer = new VBox(10, addressRow, actionButtons);
 
@@ -118,7 +120,11 @@ public class CommandSearchView extends VBox {
             int i = completedCommands.getSelectionModel().getSelectedIndex();
             if(i >= 0) { completedCommands.getItems().remove(i); reindexCommands(); }
         });
+
+        // Logika przycisków nawigacji
         schemaButton.setOnAction(e -> navigationManager.openDiagramWindow());
+        menuButton.setOnAction(e -> navigationManager.showStartScreen());
+
         insertAtButton.setOnAction(e -> {
             if (currentStage != Stage.INSTRUCTION) {
                 handleSelection(suggestionsList.getSelectionModel().getSelectedItem());
@@ -181,17 +187,14 @@ public class CommandSearchView extends VBox {
         if (!addrRaw.isEmpty() && validateHex(addrRaw)) {
             int targetIdx = Integer.parseInt(addrRaw.replaceFirst("(?i)0x", ""), 16);
 
-            // Jeśli adres jest poza obecną listą, uzupełnij NOP-ami
             while (completedCommands.getItems().size() < targetIdx) {
                 completedCommands.getItems().add("NOP ----- -> -----");
             }
 
-            // WSTAWIANIE zamiast nadpisywania (używamy add(index, element))
             if (targetIdx <= completedCommands.getItems().size()) {
                 completedCommands.getItems().add(targetIdx, cmdBody);
             }
         } else {
-            // Standardowe dodawanie na koniec
             completedCommands.getItems().add(cmdBody);
         }
 
@@ -204,7 +207,6 @@ public class CommandSearchView extends VBox {
         List<String> reindexed = new ArrayList<>();
         for (int i = 0; i < completedCommands.getItems().size(); i++) {
             String line = completedCommands.getItems().get(i);
-            // Wyciągamy samą treść komendy bez starego adresu 0xXXXX
             String content = line.contains(":") ? line.substring(line.indexOf(":") + 1).trim() : line;
             reindexed.add(String.format("0x%04X: %s", i, content));
         }
@@ -225,7 +227,6 @@ public class CommandSearchView extends VBox {
         File f = fc.showSaveDialog(getScene().getWindow());
         if (f != null) {
             try {
-                // Zapisujemy czyste instrukcje bez prefiksów 0x...:
                 List<String> toSave = completedCommands.getItems().stream()
                         .map(s -> s.contains(":") ? s.substring(s.indexOf(":") + 1).trim() : s)
                         .collect(Collectors.toList());
