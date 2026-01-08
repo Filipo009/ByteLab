@@ -15,25 +15,32 @@ public class EducationView extends StackPane {
     private final Text titleText = new Text();
     private final Text contentText = new Text();
     private final ListView<String> lessonList = new ListView<>();
-    private final SplitPane splitPane = new SplitPane();
+
+    private final HBox mainLayout = new HBox();
+    private final VBox sidebar = new VBox(10);
+    private final VBox contentArea = new VBox(25);
+
+    // Przyciski sterujące (wyciągnięte jako pola klasy, by mieć do nich dostęp w loadLesson)
+    private final Button prevBtn = new Button("<");
+    private final Button nextBtn = new Button(">");
+
     private int currentLessonId;
-    private double lastDividerPosition = 0.25;
 
     public EducationView(int startLessonId) {
         this.currentLessonId = startLessonId;
         getStyleClass().add("root");
 
-        // --- PRZYCISK ROZWIJANIA (Widoczny tylko gdy schowane) ---
+        // --- PRZYCISK ROZWIJANIA ---
         Button expandBtn = new Button(">");
         expandBtn.setPrefSize(30, 30);
         expandBtn.setVisible(false);
         StackPane.setAlignment(expandBtn, Pos.TOP_LEFT);
-        StackPane.setMargin(expandBtn, new Insets(10, 0, 0, 5));
+        StackPane.setMargin(expandBtn, new Insets(10, 0, 0, 10));
 
-        // --- SIDEBAR (Lewa strona) ---
-        VBox sidebar = new VBox(10);
+        // --- SIDEBAR ---
         sidebar.setPadding(new Insets(15));
-        sidebar.setMinWidth(0);
+        sidebar.setPrefWidth(250);
+        sidebar.setMinWidth(250);
 
         HBox sidebarHeader = new HBox();
         sidebarHeader.setAlignment(Pos.CENTER_LEFT);
@@ -52,57 +59,50 @@ public class EducationView extends StackPane {
         lessonList.getSelectionModel().select(currentLessonId);
         VBox.setVgrow(lessonList, Priority.ALWAYS);
 
+        // Dolne przyciski nawigacji
         HBox controls = new HBox(10);
         controls.setAlignment(Pos.CENTER);
-        Button prevBtn = new Button("<");
         Button menuBtn = new Button("Menu");
-        Button nextBtn = new Button(">");
-        prevBtn.setPrefWidth(40); menuBtn.setPrefWidth(80); nextBtn.setPrefWidth(40);
+
+        prevBtn.setPrefWidth(40);
+        menuBtn.setPrefWidth(80);
+        nextBtn.setPrefWidth(40);
 
         prevBtn.setOnAction(e -> navigate(-1));
         menuBtn.setOnAction(e -> MainApp.getNavigationManager().showStartScreen());
         nextBtn.setOnAction(e -> navigate(1));
-        controls.getChildren().addAll(prevBtn, menuBtn, nextBtn);
 
+        controls.getChildren().addAll(prevBtn, menuBtn, nextBtn);
         sidebar.getChildren().addAll(sidebarHeader, lessonList, controls);
 
-        // --- CONTENT (Prawa strona) ---
-        VBox contentArea = new VBox(25);
+        // --- CONTENT ---
         contentArea.setAlignment(Pos.CENTER);
         contentArea.setPadding(new Insets(40));
-        contentArea.setMinWidth(300);
+        HBox.setHgrow(contentArea, Priority.ALWAYS);
 
         titleText.setFont(Font.font("Consolas", 32));
         titleText.setStyle("-fx-fill: #007acc; -fx-font-weight: bold;");
 
         contentText.setFont(Font.font("Consolas", 18));
         contentText.setStyle("-fx-fill: #e0e0e0;");
-        contentText.setWrappingWidth(550);
+        contentText.setWrappingWidth(600);
         contentText.setTextAlignment(TextAlignment.CENTER);
         contentArea.getChildren().addAll(titleText, contentText);
 
-        splitPane.getItems().addAll(sidebar, contentArea);
-        splitPane.setDividerPositions(0.25);
+        mainLayout.getChildren().addAll(sidebar, contentArea);
 
-        // --- LOGIKA PRZYCISKÓW I BLOKOWANIA SUWAKA ---
+        // --- LOGIKA ---
         collapseBtn.setOnAction(e -> {
-            lastDividerPosition = splitPane.getDividerPositions()[0];
-            splitPane.setDividerPositions(0);
+            mainLayout.getChildren().remove(sidebar);
             expandBtn.setVisible(true);
-
-            // Wyłączenie możliwości ręcznego przeciągania paska
-            sidebar.setMouseTransparent(true);
-            sidebar.setManaged(false); // Powoduje, że contentArea zajmuje całą przestrzeń
         });
 
         expandBtn.setOnAction(e -> {
-            sidebar.setManaged(true);
-            sidebar.setMouseTransparent(false);
-            splitPane.setDividerPositions(lastDividerPosition);
+            mainLayout.getChildren().add(0, sidebar);
             expandBtn.setVisible(false);
         });
 
-        getChildren().addAll(splitPane, expandBtn);
+        getChildren().addAll(mainLayout, expandBtn);
 
         lessonList.getSelectionModel().selectedIndexProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal.intValue() != -1) loadLesson(newVal.intValue());
@@ -118,9 +118,18 @@ public class EducationView extends StackPane {
             if (lesson != null) {
                 titleText.setText(lesson.title().toUpperCase());
                 contentText.setText(lesson.content());
+
+                // Synchronizacja z listą
                 if (lessonList.getSelectionModel().getSelectedIndex() != id) {
                     lessonList.getSelectionModel().select(id);
                 }
+
+                // BLOKADA PRZYCISKÓW:
+                // Wyłącz "Poprzednia", jeśli to pierwsza lekcja (id == 0)
+                prevBtn.setDisable(id == 0);
+
+                // Wyłącz "Następna", jeśli to ostatnia lekcja (id == rozmiar - 1)
+                nextBtn.setDisable(id == LessonRepository.size() - 1);
             }
         }
     }
