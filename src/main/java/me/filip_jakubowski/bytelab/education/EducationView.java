@@ -13,14 +13,14 @@ import me.filip_jakubowski.bytelab.MainApp;
 public class EducationView extends StackPane {
 
     private final Text titleText = new Text();
-    private final Text contentText = new Text();
+    private final VBox lessonContentBox = new VBox(25);
     private final ListView<String> lessonList = new ListView<>();
+    private final ScrollPane scrollPane = new ScrollPane();
 
     private final HBox mainLayout = new HBox();
     private final VBox sidebar = new VBox(10);
     private final VBox contentArea = new VBox(25);
 
-    // Przyciski sterujące (wyciągnięte jako pola klasy, by mieć do nich dostęp w loadLesson)
     private final Button prevBtn = new Button("<");
     private final Button nextBtn = new Button(">");
 
@@ -30,14 +30,12 @@ public class EducationView extends StackPane {
         this.currentLessonId = startLessonId;
         getStyleClass().add("root");
 
-        // --- PRZYCISK ROZWIJANIA ---
         Button expandBtn = new Button(">");
         expandBtn.setPrefSize(30, 30);
         expandBtn.setVisible(false);
         StackPane.setAlignment(expandBtn, Pos.TOP_LEFT);
         StackPane.setMargin(expandBtn, new Insets(10, 0, 0, 10));
 
-        // --- SIDEBAR ---
         sidebar.setPadding(new Insets(15));
         sidebar.setPrefWidth(250);
         sidebar.setMinWidth(250);
@@ -52,18 +50,15 @@ public class EducationView extends StackPane {
 
         Button collapseBtn = new Button("<");
         collapseBtn.setPrefSize(30, 30);
-
         sidebarHeader.getChildren().addAll(sidebarLabel, spacer, collapseBtn);
 
         lessonList.setItems(FXCollections.observableArrayList(LessonRepository.getTitles()));
         lessonList.getSelectionModel().select(currentLessonId);
         VBox.setVgrow(lessonList, Priority.ALWAYS);
 
-        // Dolne przyciski nawigacji
         HBox controls = new HBox(10);
         controls.setAlignment(Pos.CENTER);
         Button menuBtn = new Button("Menu");
-
         prevBtn.setPrefWidth(40);
         menuBtn.setPrefWidth(80);
         nextBtn.setPrefWidth(40);
@@ -75,32 +70,24 @@ public class EducationView extends StackPane {
         controls.getChildren().addAll(prevBtn, menuBtn, nextBtn);
         sidebar.getChildren().addAll(sidebarHeader, lessonList, controls);
 
-        // --- CONTENT ---
-        contentArea.setAlignment(Pos.CENTER);
+        contentArea.setAlignment(Pos.TOP_CENTER);
         contentArea.setPadding(new Insets(40));
         HBox.setHgrow(contentArea, Priority.ALWAYS);
 
         titleText.setFont(Font.font("Consolas", 32));
         titleText.setStyle("-fx-fill: #007acc; -fx-font-weight: bold;");
 
-        contentText.setFont(Font.font("Consolas", 18));
-        contentText.setStyle("-fx-fill: #e0e0e0;");
-        contentText.setWrappingWidth(600);
-        contentText.setTextAlignment(TextAlignment.CENTER);
-        contentArea.getChildren().addAll(titleText, contentText);
+        lessonContentBox.setAlignment(Pos.TOP_CENTER);
+        scrollPane.setContent(lessonContentBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
+        contentArea.getChildren().addAll(titleText, scrollPane);
         mainLayout.getChildren().addAll(sidebar, contentArea);
 
-        // --- LOGIKA ---
-        collapseBtn.setOnAction(e -> {
-            mainLayout.getChildren().remove(sidebar);
-            expandBtn.setVisible(true);
-        });
-
-        expandBtn.setOnAction(e -> {
-            mainLayout.getChildren().add(0, sidebar);
-            expandBtn.setVisible(false);
-        });
+        collapseBtn.setOnAction(e -> { mainLayout.getChildren().remove(sidebar); expandBtn.setVisible(true); });
+        expandBtn.setOnAction(e -> { mainLayout.getChildren().add(0, sidebar); expandBtn.setVisible(false); });
 
         getChildren().addAll(mainLayout, expandBtn);
 
@@ -117,27 +104,46 @@ public class EducationView extends StackPane {
             LessonRepository.Lesson lesson = LessonRepository.getLesson(id);
             if (lesson != null) {
                 titleText.setText(lesson.title().toUpperCase());
-                contentText.setText(lesson.content());
-
-                // Synchronizacja z listą
-                if (lessonList.getSelectionModel().getSelectedIndex() != id) {
-                    lessonList.getSelectionModel().select(id);
-                }
-
-                // BLOKADA PRZYCISKÓW:
-                // Wyłącz "Poprzednia", jeśli to pierwsza lekcja (id == 0)
+                parseAndSetContent(lesson.content());
+                lessonList.getSelectionModel().select(id);
                 prevBtn.setDisable(id == 0);
-
-                // Wyłącz "Następna", jeśli to ostatnia lekcja (id == rozmiar - 1)
                 nextBtn.setDisable(id == LessonRepository.size() - 1);
             }
         }
     }
 
+    private void parseAndSetContent(String content) {
+        lessonContentBox.getChildren().clear();
+        String[] parts = content.split("\\[GATE:");
+
+        for (String part : parts) {
+            if (part.contains("]")) {
+                int endBracket = part.indexOf("]");
+                String gateType = part.substring(0, endBracket);
+                String remainingText = part.substring(endBracket + 1);
+
+                TheoryGateView gate = new TheoryGateView(gateType);
+                lessonContentBox.getChildren().add(gate);
+
+                if (!remainingText.isEmpty()) addTextSection(remainingText);
+            } else {
+                addTextSection(part);
+            }
+        }
+    }
+
+    private void addTextSection(String text) {
+        if (text.trim().isEmpty()) return;
+        Text t = new Text(text.trim());
+        t.setFont(Font.font("Consolas", 18));
+        t.setStyle("-fx-fill: #e0e0e0;");
+        t.setWrappingWidth(650);
+        t.setTextAlignment(TextAlignment.CENTER);
+        lessonContentBox.getChildren().add(t);
+    }
+
     private void navigate(int delta) {
         int target = currentLessonId + delta;
-        if (target >= 0 && target < LessonRepository.size()) {
-            loadLesson(target);
-        }
+        if (target >= 0 && target < LessonRepository.size()) loadLesson(target);
     }
 }

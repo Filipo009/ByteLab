@@ -39,9 +39,9 @@ public class LogicTile extends StackPane {
         gateView.setPreserveRatio(true);
 
         AnchorPane overlays = new AnchorPane();
-        setupText(input1Text, 10, 10);
+        setupText(input1Text, 10, 25);
         setupText(input2Text, 10, 85);
-        setupText(stateText, 95, 45);
+        setupText(stateText, 105, 51);
         stateText.setStyle("-fx-font-size: 38px; -fx-font-weight: bold;");
 
         overlays.getChildren().addAll(input1Text, input2Text, stateText);
