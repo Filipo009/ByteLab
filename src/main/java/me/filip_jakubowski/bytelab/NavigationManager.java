@@ -7,7 +7,6 @@ import javafx.scene.layout.Priority;
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
 import me.filip_jakubowski.bytelab.view.SimulationView;
 import me.filip_jakubowski.bytelab.logicgame.LogicGameView;
-import me.filip_jakubowski.bytelab.education.EducationView;
 
 public class NavigationManager {
 

@@ -32,7 +32,7 @@ public class StartView extends VBox {
 
         Button emulatorButton = new Button("Uruchom Emulator");
         Button educationButton = new Button("Teoria + Instrukcja");
-        Button gameButton = new Button("Gra: 0 vs 1");
+        Button gameButton = new Button("Gra: zera i jedynki");
 
         // Szerokość przycisków
         double btnWidth = 250;
@@ -45,7 +45,7 @@ public class StartView extends VBox {
         educationButton.setOnAction(e -> MainApp.getNavigationManager().showEducationMenu());
         gameButton.setOnAction(e -> MainApp.getNavigationManager().showLogicGame());
 
-        buttons.getChildren().addAll(emulatorButton, educationButton, gameButton);
+        buttons.getChildren().addAll(educationButton, gameButton, emulatorButton);
         getChildren().addAll(header, buttons);
     }
 }

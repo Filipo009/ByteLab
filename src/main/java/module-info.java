@@ -8,4 +8,6 @@ module me.filip_jakubowski.bytelab {
     exports me.filip_jakubowski.bytelab;
     exports me.filip_jakubowski.bytelab.education;
     opens me.filip_jakubowski.bytelab.education to javafx.fxml;
+    exports me.filip_jakubowski.bytelab.logicgame;
+    opens me.filip_jakubowski.bytelab.logicgame to javafx.fxml;
 }
