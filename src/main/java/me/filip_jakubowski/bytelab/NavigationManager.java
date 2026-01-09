@@ -1,12 +1,15 @@
 package me.filip_jakubowski.bytelab;
 
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
 import me.filip_jakubowski.bytelab.view.SimulationView;
+import me.filip_jakubowski.bytelab.view.DiagramView;
 import me.filip_jakubowski.bytelab.logicgame.LogicGameView;
+import me.filip_jakubowski.bytelab.education.EducationView;
 
 public class NavigationManager {
 
@@ -17,30 +20,36 @@ public class NavigationManager {
         this.stage.setTitle("ByteLab");
     }
 
+    private void switchRoot(Parent root, double prefWidth, double prefHeight) {
+        if (stage.getScene() == null) {
+            Scene scene = new Scene(root, prefWidth, prefHeight);
+            applyStyles(scene);
+            stage.setScene(scene);
+        } else {
+            stage.getScene().setRoot(root);
+            // Jeśli okno nie jest w trybie pełnoekranowym ani zmaksymalizowane,
+            // dostosowujemy rozmiar do preferowanego dla danego widoku.
+            if (!stage.isFullScreen() && !stage.isMaximized()) {
+                stage.setWidth(prefWidth);
+                stage.setHeight(prefHeight);
+                stage.centerOnScreen();
+            }
+        }
+        stage.show();
+    }
+
     public void showStartScreen() {
         StartView view = new StartView();
-        Scene scene = new Scene(view, 600, 450);
-        applyStyles(scene);
-        stage.setScene(scene);
-        stage.show();
+        switchRoot(view, 600, 450);
     }
 
     public void showEducationMenu() {
-        showLesson(0); // Przekierowanie do nowej klasy EducationView zaczynając od pierwszej lekcji
+        showLesson(0);
     }
 
     public void showLesson(int id) {
-        // Jawna inicjalizacja widoku
-        me.filip_jakubowski.bytelab.education.EducationView view =
-                new me.filip_jakubowski.bytelab.education.EducationView(id);
-
-        // Rozwiązanie błędu: upewnienie się, że przekazujemy (Parent, double, double)
-        // Usunięto ewentualne literówki w liczbach
-        Scene scene = new Scene((javafx.scene.Parent) view, 900.0, 600.0);
-
-        applyStyles(scene);
-        stage.setScene(scene);
-        stage.show();
+        EducationView view = new EducationView(id);
+        switchRoot(view, 900, 600);
     }
 
     public void showEmulator() {
@@ -57,25 +66,19 @@ public class NavigationManager {
         HBox.setHgrow(simulationView, Priority.ALWAYS);
 
         mainContent.getChildren().addAll(commandSearchView, simulationView);
-
-        Scene scene = new Scene(mainContent, 1200, 800);
-        applyStyles(scene);
-        stage.setScene(scene);
-        stage.centerOnScreen();
-        stage.show();
+        switchRoot(mainContent, 1200, 800);
     }
 
     public void showLogicGame() {
         LogicGameView view = new LogicGameView();
-        Scene scene = new Scene(view, 1000, 750);
-        applyStyles(scene);
-        stage.setScene(scene);
-        stage.centerOnScreen();
-        stage.show();
+        switchRoot(view, 1000, 750);
     }
 
     public void openDiagramWindow() {
-        // Logika otwierania okna schematu
+        if (stage.getScene() != null) {
+            DiagramView view = new DiagramView(stage.getScene());
+            switchRoot(view, 1000, 750);
+        }
     }
 
     private void applyStyles(Scene scene) {
