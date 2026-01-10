@@ -97,7 +97,7 @@ public class EducationView extends StackPane {
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
         // Naprawiony Regex (usunięto spacje i dodano brakujące moduły)
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -108,11 +108,12 @@ public class EducationView extends StackPane {
             switch (tag) {
                 case "BINARY" -> lessonContentBox.getChildren().add(new TheoryBinaryView(false));
                 case "BINARY:U2" -> lessonContentBox.getChildren().add(new TheoryBinaryView(true));
-                case "ALU:ADDER" -> lessonContentBox.getChildren().add(new TheoryALUView()); // Poprzedni zwykły adder
-                case "ALU:FULL" -> lessonContentBox.getChildren().add(new TheoryALUFullView()); // Adder U2 + Zero Flag
-                case "ALU:LOGIC" -> lessonContentBox.getChildren().add(new TheoryALULogicView()); // Moduł logiczny
+                case "ALU:ADDER" -> lessonContentBox.getChildren().add(new TheoryALUView());
+                case "ALU:FULL" -> lessonContentBox.getChildren().add(new TheoryALUFullView());
+                case "ALU:LOGIC" -> lessonContentBox.getChildren().add(new TheoryALULogicView());
                 case "SHIFT:MODULE" -> lessonContentBox.getChildren().add(new TheoryShiftView());
                 case "REGISTER:MODULE" -> lessonContentBox.getChildren().add(new TheoryRegisterView());
+                case "RAM:MODULE" -> lessonContentBox.getChildren().add(new TheoryRAMView()); // DODANO TO
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));

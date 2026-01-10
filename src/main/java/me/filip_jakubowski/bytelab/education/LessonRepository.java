@@ -56,7 +56,17 @@ public class LessonRepository {
                             "[REGISTER:MODULE]"),
 
             new Lesson("Pamięć RAM",
-                    "RAM (Random Access Memory) to znacznie większy magazyn danych niż rejestry, ale działający wolniej. Przechowuje ona kod programu oraz dane, na których procesor aktualnie pracuje.")
+                    "Pamięć RAM (Random Access Memory) to zestaw wielu komórek (rejestrów) pod jednym wspólnym adresem. \n\n" +
+                            "--- Jak działa adresowanie? ---\n" +
+                            "Aby procesor nie musiał mieć osobnych kabli do każdej komórki, stosuje się **dekoder**. W naszym modelu mamy 4 bity adresu, co pozwala wybrać 1 z 16 komórek ($2^4 = 16$).\n\n" +
+                            "--- Chip Select (CS) ---\n" +
+                            "W komputerze jest wiele układów pamięci. Sygnał CS aktywuje konkretną kość. Gdy CS jest wyłączony, pamięć 'odłącza się' od szyny i nie reaguje na próby zapisu czy odczytu.\n\n" +
+                            "--- Cykl pracy ---\n" +
+                            "1. Ustaw adres komórki.\n" +
+                            "2. Włącz Chip Select.\n" +
+                            "3. Ustaw dane na kluczach wejściowych i kliknij **WRITE**, aby zapisać.\n" +
+                            "4. Kliknij **READ**, aby przenieść zawartość komórki do rejestru wyjściowego.\n\n" +
+                            "[RAM:MODULE]")
     );
 
     public static Lesson getLesson(int id) {
