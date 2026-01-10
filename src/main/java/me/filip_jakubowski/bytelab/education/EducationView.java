@@ -9,27 +9,24 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import me.filip_jakubowski.bytelab.MainApp;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class EducationView extends StackPane {
-
     private final Text titleText = new Text();
     private final VBox lessonContentBox = new VBox(25);
     private final ListView<String> lessonList = new ListView<>();
     private final ScrollPane scrollPane = new ScrollPane();
-
     private final HBox mainLayout = new HBox();
     private final VBox sidebar = new VBox(10);
     private final VBox contentArea = new VBox(25);
-
     private final Button prevBtn = new Button("<");
     private final Button nextBtn = new Button(">");
-
     private int currentLessonId;
 
     public EducationView(int startLessonId) {
         this.currentLessonId = startLessonId;
         getStyleClass().add("root");
-
         Button expandBtn = new Button(">");
         expandBtn.setPrefSize(30, 30);
         expandBtn.setVisible(false);
@@ -39,62 +36,47 @@ public class EducationView extends StackPane {
         sidebar.setPadding(new Insets(15));
         sidebar.setPrefWidth(250);
         sidebar.setMinWidth(250);
-
         HBox sidebarHeader = new HBox();
         sidebarHeader.setAlignment(Pos.CENTER_LEFT);
         Label sidebarLabel = new Label("SPIS TREŚCI");
         sidebarLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #888888;");
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-
         Button collapseBtn = new Button("<");
         collapseBtn.setPrefSize(30, 30);
         sidebarHeader.getChildren().addAll(sidebarLabel, spacer, collapseBtn);
-
         lessonList.setItems(FXCollections.observableArrayList(LessonRepository.getTitles()));
         lessonList.getSelectionModel().select(currentLessonId);
         VBox.setVgrow(lessonList, Priority.ALWAYS);
-
         HBox controls = new HBox(10);
         controls.setAlignment(Pos.CENTER);
         Button menuBtn = new Button("Menu");
         prevBtn.setPrefWidth(40);
         menuBtn.setPrefWidth(80);
         nextBtn.setPrefWidth(40);
-
         prevBtn.setOnAction(e -> navigate(-1));
         menuBtn.setOnAction(e -> MainApp.getNavigationManager().showStartScreen());
         nextBtn.setOnAction(e -> navigate(1));
-
         controls.getChildren().addAll(prevBtn, menuBtn, nextBtn);
         sidebar.getChildren().addAll(sidebarHeader, lessonList, controls);
-
         contentArea.setAlignment(Pos.TOP_CENTER);
         contentArea.setPadding(new Insets(40));
         HBox.setHgrow(contentArea, Priority.ALWAYS);
-
         titleText.setFont(Font.font("Consolas", 32));
         titleText.setStyle("-fx-fill: #007acc; -fx-font-weight: bold;");
-
         lessonContentBox.setAlignment(Pos.TOP_CENTER);
         scrollPane.setContent(lessonContentBox);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
-
         contentArea.getChildren().addAll(titleText, scrollPane);
         mainLayout.getChildren().addAll(sidebar, contentArea);
-
         collapseBtn.setOnAction(e -> { mainLayout.getChildren().remove(sidebar); expandBtn.setVisible(true); });
         expandBtn.setOnAction(e -> { mainLayout.getChildren().add(0, sidebar); expandBtn.setVisible(false); });
-
         getChildren().addAll(mainLayout, expandBtn);
-
         lessonList.getSelectionModel().selectedIndexProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal.intValue() != -1) loadLesson(newVal.intValue());
         });
-
         loadLesson(currentLessonId);
     }
 
@@ -114,26 +96,26 @@ public class EducationView extends StackPane {
 
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
-        String[] parts = content.split("\\[GATE:");
-
-        for (String part : parts) {
-            if (part.contains("]")) {
-                int endBracket = part.indexOf("]");
-                String gateType = part.substring(0, endBracket);
-                String remainingText = part.substring(endBracket + 1);
-
-                TheoryGateView gate = new TheoryGateView(gateType);
-                lessonContentBox.getChildren().add(gate);
-
-                if (!remainingText.isEmpty()) addTextSection(remainingText);
-            } else {
-                addTextSection(part);
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|GATE:[a-z]+)\\]");
+        Matcher matcher = pattern.matcher(content);
+        int lastEnd = 0;
+        while (matcher.find()) {
+            addTextSection(content.substring(lastEnd, matcher.start()));
+            String tag = matcher.group(1);
+            if (tag.equals("BINARY")) {
+                lessonContentBox.getChildren().add(new TheoryBinaryView(false));
+            } else if (tag.equals("BINARY:U2")) {
+                lessonContentBox.getChildren().add(new TheoryBinaryView(true));
+            } else if (tag.startsWith("GATE:")) {
+                lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
             }
+            lastEnd = matcher.end();
         }
+        addTextSection(content.substring(lastEnd));
     }
 
     private void addTextSection(String text) {
-        if (text.trim().isEmpty()) return;
+        if (text == null || text.trim().isEmpty()) return;
         Text t = new Text(text.trim());
         t.setFont(Font.font("Consolas", 18));
         t.setStyle("-fx-fill: #e0e0e0;");
