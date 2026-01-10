@@ -96,7 +96,7 @@ public class EducationView extends StackPane {
 
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
         while (matcher.find()) {
@@ -106,6 +106,10 @@ public class EducationView extends StackPane {
                 lessonContentBox.getChildren().add(new TheoryBinaryView(false));
             } else if (tag.equals("BINARY:U2")) {
                 lessonContentBox.getChildren().add(new TheoryBinaryView(true));
+            } else if (tag.equals("ALU:ADDER")) {
+                lessonContentBox.getChildren().add(new TheoryALUView());
+            } else if (tag.equals("ALU:FULL")) {
+                lessonContentBox.getChildren().add(new TheoryALUFullView());
             } else if (tag.startsWith("GATE:")) {
                 lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
             }
