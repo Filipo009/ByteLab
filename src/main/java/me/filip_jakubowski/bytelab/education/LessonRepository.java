@@ -38,25 +38,25 @@ public class LessonRepository {
                             "ALU wykonuje też operacje bitowe na całych bajtach:\n" +
                             "[ALU:LOGIC]\n\n" +
                             "--- Przesunięcia ---\n" +
-                            "Ostatnim elementem są shifty (mnożenie/dzielenie przez 2):\n" +
+                            "Przesunięcia bitowe (Shifts) to operacje, które dosłownie przesuwają wszystkie bity w lewo lub w prawo. Są one niezwykle szybkie i stanowią fundament optymalizacji matematycznej.\n\n" +
+                            "--- Mnożenie i Dzielenie ---\n" +
+                            "Przesunięcie w lewo o 1 pozycję (SHL) odpowiada pomnożeniu liczby przez 2. \n" +
+                            "Przesunięcie w prawo o 1 pozycję (SHR) odpowiada dzieleniu całkowitemu przez 2.\n\n" +
+                            "--- Rotacje ---\n" +
+                            "W przypadku zwykłego przesunięcia, bit który 'wypada' z rejestru jest tracony, a w puste miejsce wskakuje 0. W przypadku rotacji (ROL/ROR), bit ten wraca drugą stroną.\n\n" +
+                            "Ustaw bity wejściowe, a następnie wybierz operację, aby zobaczyć jak zmienia się wartość dziesiętna:\n" +
                             "[SHIFT:MODULE]"),
 
-            new Lesson("Rejestry i Pamięć",
-                    "Rejestry to najszybszy rodzaj pamięci w komputerze. Znajdują się bezpośrednio w procesorze i są połączone z wejściami ALU.\n\n" +
-                            "W naszym emulatorze rejestry A, B, C i D przechowują 8-bitowe wartości. Rejestr PC (Program Counter) śledzi postęp programu, wskazując na adres kolejnej instrukcji."),
+            new Lesson("Rejestry",
+                    "Jednostka ALU wykonuje obliczenia, ale nie potrafi ich zapamiętać. Do tego służą Rejestry – bardzo szybkie komórki pamięci umieszczone tuż obok ALU.\n\n" +
+                            "Rejestr posiada piny sterujące:\n" +
+                            "1. **LOAD** – Gdy ten sygnał jest aktywny, rejestr kopiuje wartości z magistrali wejściowej do swojej pamięci.\n" +
+                            "2. **CLEAR** – Natychmiast zeruje wszystkie bity w rejestrze.\n\n" +
+                            "W naszym procesorze rejestry (np. REG A i REG B) są używane do trzymania argumentów operacji dla ALU. Przetestuj działanie zapisu danych w module poniżej:\n" +
+                            "[REGISTER:MODULE]"),
 
-            new Lesson("Przesunięcia Bitowe",
-                      "Przesunięcia bitowe (Shifts) to operacje, które dosłownie przesuwają wszystkie bity w lewo lub w prawo. Są one niezwykle szybkie i stanowią fundament optymalizacji matematycznej.\n\n" +
-                      "--- Mnożenie i Dzielenie ---\n" +
-                      "Przesunięcie w lewo o 1 pozycję (SHL) odpowiada pomnożeniu liczby przez 2. \n" +
-                      "Przesunięcie w prawo o 1 pozycję (SHR) odpowiada dzieleniu całkowitemu przez 2.\n\n" +
-                      "--- Rotacje ---\n" +
-                      "W przypadku zwykłego przesunięcia, bit który 'wypada' z rejestru jest tracony, a w puste miejsce wskakuje 0. W przypadku rotacji (ROL/ROR), bit ten wraca drugą stroną.\n\n" +
-                      "Ustaw bity wejściowe, a następnie wybierz operację, aby zobaczyć jak zmienia się wartość dziesiętna:\n" +
-                      "[SHIFT:MODULE]"),
-
-            new Lesson("Rejestry i Pamięć",
-                               "Rejestry to najszybszy rodzaj pamięci w komputerze. Znajdują się bezpośrednio w procesorze i są połączone z wejściami ALU.")
+            new Lesson("Pamięć RAM",
+                    "RAM (Random Access Memory) to znacznie większy magazyn danych niż rejestry, ale działający wolniej. Przechowuje ona kod programu oraz dane, na których procesor aktualnie pracuje.")
     );
 
     public static Lesson getLesson(int id) {

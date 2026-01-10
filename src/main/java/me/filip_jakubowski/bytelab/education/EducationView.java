@@ -97,7 +97,7 @@ public class EducationView extends StackPane {
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
         // Naprawiony Regex (usunięto spacje i dodano brakujące moduły)
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -112,6 +112,7 @@ public class EducationView extends StackPane {
                 case "ALU:FULL" -> lessonContentBox.getChildren().add(new TheoryALUFullView()); // Adder U2 + Zero Flag
                 case "ALU:LOGIC" -> lessonContentBox.getChildren().add(new TheoryALULogicView()); // Moduł logiczny
                 case "SHIFT:MODULE" -> lessonContentBox.getChildren().add(new TheoryShiftView());
+                case "REGISTER:MODULE" -> lessonContentBox.getChildren().add(new TheoryRegisterView());
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
