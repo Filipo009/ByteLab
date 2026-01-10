@@ -86,7 +86,19 @@ public class LessonRepository {
                             "2. Adder wykonuje obliczenia w czasie rzeczywistym – zwróć uwagę, jak linie wyjściowe (z prawej strony) zmieniają kolor, gdy zmieniasz bity wejściowe.\n" +
                             "3. Rejestr (po prawej) jest ustawiony pionowo, co jest częstym zabiegiem w projektowaniu procesorów, aby zaoszczędzić miejsce i ułatwić prowadzenie szyn danych.\n\n" +
                             "Spróbuj dodać dwie liczby i 'zatrzasnąć' wynik w pionowym rejestrze przyciskiem **LOAD**.\n\n" +
-                            "[BUS:COMPLEX]")
+                            "[BUS:COMPLEX]"),
+
+            new Lesson("Zestaw Instrukcji (ISA)",
+                    "Procesor nie rozumie ludzkiej mowy, ale rozumie zestaw krótkich poleceń zwanych **Instrukcjami**.\n\n" +
+                            "--- Anatomia Rozkazu ---\n" +
+                            "Większość instrukcji w naszym systemie wygląda tak:\n" +
+                            "`OPERACJA` | `ŹRÓDŁO` -> `CEL` \n\n" +
+                            "* **ADD ---- -> REG 0**: Dodaj wartości z A i B, wyślij wynik do Rejestru 0.\n" +
+                            "* **MOV REG A -> REG B**: Skopiuj zawartość Rejestru A do Rejestru B.\n\n" +
+                            "--- Dlaczego '----'? ---\n" +
+                            "W instrukcji `ADD` źródło jest domyślne. Wynika to z budowy hardware'u: Adder jest na stałe wpięty między magistrale wejściowe. Nie trzeba mu mówić, co ma dodać – on dodaje wszystko, co 'widzi' na wejściach.\n\n" +
+                            "Kliknij poniższe przyciski, aby zobaczyć jak instrukcje konfigurują procesor:\n\n" +
+                            "[INSTR:VIEW]")
     );
 
     public static Lesson getLesson(int id) {
