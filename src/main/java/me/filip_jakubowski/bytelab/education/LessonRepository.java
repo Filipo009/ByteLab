@@ -12,7 +12,7 @@ public class LessonRepository {
                             "[BINARY]\n\n" +
                             "Aby komputer mógł zapisywać liczby ujemne, stosuje się system U2 (Uzupełnień do dwóch). Różni się on tym, że najbardziej znaczący bit (MSB) ma wagę ujemną (dla 8 bitów jest to -128).\n\n" +
                             "Kluczową operacją w U2 jest zmiana znaku liczby. Aby zamienić liczbę dodatnią na ujemną (lub odwrotnie), wykonujemy dwa kroki:\n" +
-                            "1. Negujemy wszystkie bity (zmieniając 0 na 1 i 1 na 0).\n" +
+                            "1. Negujemy wszystkie bity (NOT).\n" +
                             "2. Do wyniku dodajemy 1.\n\n" +
                             "Przetestuj to poniżej, ustawiając bity i klikając przycisk zmiany znaku:\n" +
                             "[BINARY:U2]"),
@@ -21,31 +21,49 @@ public class LessonRepository {
                     "Skoro wiemy już, że dane to zera i jedynki, musimy wiedzieć, jak je przetwarzać. Służą do tego bramki logiczne – miniaturowe układy, które przyjmują sygnały wejściowe i na ich podstawie wystawiają wynik.\n\n" +
                             "1. Bramka AND (I) - Daje 1 tylko wtedy, gdy na obu wejściach jest 1.\n[GATE:and]\n" +
                             "2. Bramka OR (LUB) - Daje 1, jeśli przynajmniej na jednym wejściu jest 1.\n[GATE:or]\n" +
-                            "3. Bramka XOR (Ekskluzywne LUB) - Daje 1 tylko wtedy, gdy wejścia są RÓŻNE. Jest podstawą budowy sumatorów.\n[GATE:xor]\n" +
+                            "3. Bramka XOR - Daje 1 tylko wtedy, gdy wejścia są RÓŻNE. Jest podstawą budowy sumatorów.\n[GATE:xor]\n" +
                             "4. Bramka NAND - Odwrotność AND. Jest to bramka 'uniwersalna'.\n[GATE:nand]\n" +
-                            "5. Bramka NOR - Odwrotność OR. Daje 1 tylko, gdy oba wejścia są równe 0.\n[GATE:nor]\n" +
-                            "6. Bramka XNOR - Odwrotność XOR. Daje 1, gdy oba wejścia są takie same.\n[GATE:xnor]"),
+                            "5. Bramka NOR - Odwrotność OR.\n[GATE:nor]\n" +
+                            "6. Bramka XNOR - Odwrotność XOR.\n[GATE:xnor]"),
 
             new Lesson("Jednostka ALU",
-                    "ALU (Arithmetic Logic Unit) to serce procesora. Odpowiada za obliczenia matematyczne oraz operacje logiczne. Kiedy wykonujesz instrukcję ADD, procesor bierze wartości z rejestrów, przepuszcza je przez sieć bramek i zapisuje wynik.\n\n" +
-                            "Podstawą ALU jest sumator (Adder). Ponieważ bajt ma tylko 8 bitów, przy dodawaniu może dojść do przepełnienia – wtedy aktywowany jest bit Carry (przeniesienie).\n\n" +
+                    "ALU (Arithmetic Logic Unit) to serce procesora. Podstawową operacją jest dodawanie realizowane przez sumator:\n" +
                             "[ALU:ADDER]\n\n" +
-                            "Komputer nie posiada osobnego układu do odejmowania. Zamiast tego wykonuje dodawanie liczby przeciwnej: $A - B = A + (-B)$.\n\n" +
-                            "Dzięki systemowi U2, aby odjąć liczbę B, wystarczy ją zanegować, dodać 1 (co realizujemy ustawiając Carry-In na 1) i dodać do liczby A. Poniższy moduł pozwala przełączać się między dodawaniem a odejmowaniem:\n" +
-                            "[ALU:FULL]"),
+                            "--- Flaga Zero (Z) ---\n" +
+                            "Ważnym elementem ALU są flagi stanu. Flaga ZERO (Z) przyjmuje wartość 1, gdy wynik operacji to same zera. Pozwala to procesorowi sprawdzać np. czy dwie liczby są równe (wynik odejmowania to 0).\n\n" +
+                            "--- Arytmetyka U2 i Odejmowanie ---\n" +
+                            "Odejmowanie $A - B$ to dodawanie liczby przeciwnej: $A + (NOT B + 1)$. Sprawdź działanie flagi ZERO, gdy odejmiesz od siebie te same liczby:\n" +
+                            "[ALU:FULL]\n\n" +
+                            "--- Operacje Logiczne ---\n" +
+                            "ALU wykonuje też operacje bitowe na całych bajtach:\n" +
+                            "[ALU:LOGIC]\n\n" +
+                            "--- Przesunięcia ---\n" +
+                            "Ostatnim elementem są shifty (mnożenie/dzielenie przez 2):\n" +
+                            "[SHIFT:MODULE]"),
 
             new Lesson("Rejestry i Pamięć",
-                    "Procesor nie mógłby pracować, gdyby nie miał gdzie trzymać wyników swoich obliczeń. Rejestry to najszybszy rodzaj pamięci w komputerze.\n\n" +
-                            "W naszym emulatorze znajdziesz rejestry takie jak REG A, B, C czy D. Są one połączone bezpośrednio z jednostką ALU. PC (Program Counter) to specjalny rejestr, który wskazuje, którą linię kodu mamy aktualnie wykonać.")
+                    "Rejestry to najszybszy rodzaj pamięci w komputerze. Znajdują się bezpośrednio w procesorze i są połączone z wejściami ALU.\n\n" +
+                            "W naszym emulatorze rejestry A, B, C i D przechowują 8-bitowe wartości. Rejestr PC (Program Counter) śledzi postęp programu, wskazując na adres kolejnej instrukcji."),
+
+            new Lesson("Przesunięcia Bitowe",
+                      "Przesunięcia bitowe (Shifts) to operacje, które dosłownie przesuwają wszystkie bity w lewo lub w prawo. Są one niezwykle szybkie i stanowią fundament optymalizacji matematycznej.\n\n" +
+                      "--- Mnożenie i Dzielenie ---\n" +
+                      "Przesunięcie w lewo o 1 pozycję (SHL) odpowiada pomnożeniu liczby przez 2. \n" +
+                      "Przesunięcie w prawo o 1 pozycję (SHR) odpowiada dzieleniu całkowitemu przez 2.\n\n" +
+                      "--- Rotacje ---\n" +
+                      "W przypadku zwykłego przesunięcia, bit który 'wypada' z rejestru jest tracony, a w puste miejsce wskakuje 0. W przypadku rotacji (ROL/ROR), bit ten wraca drugą stroną.\n\n" +
+                      "Ustaw bity wejściowe, a następnie wybierz operację, aby zobaczyć jak zmienia się wartość dziesiętna:\n" +
+                      "[SHIFT:MODULE]"),
+
+            new Lesson("Rejestry i Pamięć",
+                               "Rejestry to najszybszy rodzaj pamięci w komputerze. Znajdują się bezpośrednio w procesorze i są połączone z wejściami ALU.")
     );
 
     public static Lesson getLesson(int id) {
         return (id >= 0 && id < LESSONS.size()) ? LESSONS.get(id) : null;
     }
-
     public static List<String> getTitles() {
         return LESSONS.stream().map(Lesson::title).toList();
     }
-
     public static int size() { return LESSONS.size(); }
 }

@@ -96,22 +96,27 @@ public class EducationView extends StackPane {
 
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|GATE:[a-z]+)\\]");
+        // Naprawiony Regex (usunięto spacje i dodano brakujące moduły)
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
+
         while (matcher.find()) {
             addTextSection(content.substring(lastEnd, matcher.start()));
             String tag = matcher.group(1);
-            if (tag.equals("BINARY")) {
-                lessonContentBox.getChildren().add(new TheoryBinaryView(false));
-            } else if (tag.equals("BINARY:U2")) {
-                lessonContentBox.getChildren().add(new TheoryBinaryView(true));
-            } else if (tag.equals("ALU:ADDER")) {
-                lessonContentBox.getChildren().add(new TheoryALUView());
-            } else if (tag.equals("ALU:FULL")) {
-                lessonContentBox.getChildren().add(new TheoryALUFullView());
-            } else if (tag.startsWith("GATE:")) {
-                lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
+
+            switch (tag) {
+                case "BINARY" -> lessonContentBox.getChildren().add(new TheoryBinaryView(false));
+                case "BINARY:U2" -> lessonContentBox.getChildren().add(new TheoryBinaryView(true));
+                case "ALU:ADDER" -> lessonContentBox.getChildren().add(new TheoryALUView()); // Poprzedni zwykły adder
+                case "ALU:FULL" -> lessonContentBox.getChildren().add(new TheoryALUFullView()); // Adder U2 + Zero Flag
+                case "ALU:LOGIC" -> lessonContentBox.getChildren().add(new TheoryALULogicView()); // Moduł logiczny
+                case "SHIFT:MODULE" -> lessonContentBox.getChildren().add(new TheoryShiftView());
+                default -> {
+                    if (tag.startsWith("GATE:")) {
+                        lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
+                    }
+                }
             }
             lastEnd = matcher.end();
         }
