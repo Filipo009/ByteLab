@@ -96,8 +96,8 @@ public class EducationView extends StackPane {
 
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
-        // Naprawiony Regex (usunięto spacje i dodano brakujące moduły)
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|GATE:[a-z]+)\\]");
+
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -113,7 +113,9 @@ public class EducationView extends StackPane {
                 case "ALU:LOGIC" -> lessonContentBox.getChildren().add(new TheoryALULogicView());
                 case "SHIFT:MODULE" -> lessonContentBox.getChildren().add(new TheoryShiftView());
                 case "REGISTER:MODULE" -> lessonContentBox.getChildren().add(new TheoryRegisterView());
-                case "RAM:MODULE" -> lessonContentBox.getChildren().add(new TheoryRAMView()); // DODANO TO
+                case "RAM:MODULE" -> lessonContentBox.getChildren().add(new TheoryRAMView());
+                case "BUS:MODULE" -> lessonContentBox.getChildren().add(new TheoryBusView());
+                case "BUS:COMPLEX" -> lessonContentBox.getChildren().add(new TheoryComplexBusView()); // KLUCZOWY CASE
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));

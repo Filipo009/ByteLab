@@ -66,7 +66,27 @@ public class LessonRepository {
                             "2. Włącz Chip Select.\n" +
                             "3. Ustaw dane na kluczach wejściowych i kliknij **WRITE**, aby zapisać.\n" +
                             "4. Kliknij **READ**, aby przenieść zawartość komórki do rejestru wyjściowego.\n\n" +
-                            "[RAM:MODULE]")
+                            "[RAM:MODULE]"),
+
+            new Lesson("Magistrale (Buses)",
+                    "Wewnątrz procesora dane nie poruszają się chaotycznie. Podróżują one po **Magistralach** (Buses) – czyli wiązkach przewodów łączących różne moduły.\n\n" +
+                            "--- Sygnały i Kolory ---\n" +
+                            "W elektronice magistrala nie ma 'koloru', ale ma napięcie. \n" +
+                            "* **Stan Wysoki (1)**: Prąd płynie (w naszej symulacji kolor zielony).\n" +
+                            "* **Stan Niski (0)**: Brak prądu (w naszej symulacji kolor czerwony).\n\n" +
+                            "--- Przepływ danych ---\n" +
+                            "Poniżej widzisz dwie magistrale wejściowe podłączone do addera. Wynik z addera trafia na trzecią magistralę, która prowadzi do rejestru. \n" +
+                            "Zauważ, że mimo iż adder cały czas podaje wynik na magistralę wyjściową, rejestr 'zapamięta' go dopiero, gdy wyślesz sygnał **LOAD**.\n\n" +
+                            "[BUS:MODULE]"),
+
+            new Lesson("Architektura Datapath",
+                    "Prawdziwa potęga procesora tkwi w tym, jak łączymy ze sobą moduły. W tej lekcji widzisz schemat przepływu danych zwany **Datapath**.\n\n" +
+                            "--- Jak to działa? ---\n" +
+                            "1. Mamy dwie magistrale wejściowe (A i B), które dostarczają liczby do **Addera**.\n" +
+                            "2. Adder wykonuje obliczenia w czasie rzeczywistym – zwróć uwagę, jak linie wyjściowe (z prawej strony) zmieniają kolor, gdy zmieniasz bity wejściowe.\n" +
+                            "3. Rejestr (po prawej) jest ustawiony pionowo, co jest częstym zabiegiem w projektowaniu procesorów, aby zaoszczędzić miejsce i ułatwić prowadzenie szyn danych.\n\n" +
+                            "Spróbuj dodać dwie liczby i 'zatrzasnąć' wynik w pionowym rejestrze przyciskiem **LOAD**.\n\n" +
+                            "[BUS:COMPLEX]")
     );
 
     public static Lesson getLesson(int id) {
