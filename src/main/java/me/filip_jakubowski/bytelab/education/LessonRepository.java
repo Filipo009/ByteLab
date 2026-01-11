@@ -106,7 +106,20 @@ public class LessonRepository {
                             "Poniższa tabela przedstawia zestaw instrukcji (ISA) naszego procesora wraz z ich kodami binarnymi i argumentami:\n\n" +
                             "[TABLE:ISA_OPCODES]\n\n" +
                             "Spróbuj teraz samodzielnie pobawić się dekoderem. Zmieniaj bity OPCODE (4 bity po lewej), aby zobaczyć, jaką instrukcję rozpozna jednostka sterująca:\n\n" +
-                            "[OPCODE:DECODER]")
+                            "[OPCODE:DECODER]"),
+
+            new Lesson("Kompilacja i Format Instrukcji",
+                    "Skoro znamy już listę instrukcji (ISA), musimy dowiedzieć się, jak procesor odróżnia np. 'MOV REG A -> REG B' od 'MOV REG C -> REG D'.\n\n" +
+                            "Rozwiązaniem jest **Format Instrukcji**. Jeden 8-bitowy bajt dzielimy na części (pola):\n" +
+                            "* **Bity 7-4 (4 bity):** Opcode (numer operacji z tabeli poniżej).\n" +
+                            "* **Bity 3-2 (2 bity):** Kod rejestru źródłowego (SRC).\n" +
+                            "* **Bity 1-0 (2 bity):** Kod rejestru docelowego (DST).\n\n" +
+                            "[TABLE:ISA_OPCODES]\n\n" + // <--- TA SAMA TABELKA TUTAJ
+                            "--- Adresowanie Rejestrów A-D ---\n" +
+                            "Dzięki temu, że mamy tylko 4 rejestry, wystarczą nam tylko 2 bity, aby wskazać dowolny z nich:\n\n" +
+                            "[TABLE:REGISTERS_SHORT]\n\n" +
+                            "Poniżej możesz przetestować, jak zmieniając bity, tworzysz gotowe polecenia dla procesora:\n\n" +
+                            "[COMPILER:MODULE]")
     );
 
     public static Lesson getLesson(int id) {

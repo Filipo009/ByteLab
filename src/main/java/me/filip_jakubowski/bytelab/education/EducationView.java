@@ -99,7 +99,7 @@ public class EducationView extends StackPane {
         lessonContentBox.getChildren().clear();
 
         // Zaktualizowany Pattern o nowe tagi: TABLE:ISA_OPCODES i OPCODE:DECODER
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|OPCODE:DECODER|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|COMPILER:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -121,6 +121,7 @@ public class EducationView extends StackPane {
                 case "INSTR:VIEW" -> lessonContentBox.getChildren().add(new TheoryInstructionView());
                 case "TABLE:ISA_OPCODES" -> lessonContentBox.getChildren().add(createISATable());
                 case "OPCODE:DECODER" -> lessonContentBox.getChildren().add(new TheoryOpcodeDecoderView());
+                case "COMPILER:MODULE" -> lessonContentBox.getChildren().add(new TheoryInstructionCompilerView());
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
@@ -163,17 +164,17 @@ public class EducationView extends StackPane {
 
         String[][] data = {
                 {"NOP",  "0x0", "---", "---", "No Operation"},
-                {"IN",   "0x1", "HEX", "REG A-E", "0xFF -> REG A"},
-                {"OUT",  "0x2", "REG", "---", "REG B -> OUT"},
-                {"ADD",  "0x3", "---", "REG A-E", "A + B -> REG C"},
-                {"SUB",  "0x4", "---", "REG A-E", "A - B -> REG A"},
-                {"AND",  "0x5", "---", "REG A-E", "A AND B"},
-                {"NAND", "0x6", "---", "REG A-E", "A NAND B"},
-                {"OR",   "0x7", "---", "REG A-E", "A OR B"},
-                {"NOR",  "0x8", "---", "REG A-E", "A NOR B"},
-                {"XOR",  "0x9", "---", "REG A-E", "A XOR B"},
-                {"NOT",  "0xA", "REG", "REG", "NOT REG A"},
-                {"MOV",  "0xB", "REG", "REG", "REG A -> REG B"},
+                {"IN",   "0x1", "INPUT HEX", "REG A-D", "0xFF -> REG A"},
+                {"OUT",  "0x2", "REG A-D", "---", "REG B -> OUT"},
+                {"ADD",  "0x3", "---", "REG A-D", "A + B -> REG C"},
+                {"SUB",  "0x4", "---", "REG A-D", "A - B -> REG A"},
+                {"AND",  "0x5", "---", "REG A-D", "A AND B -> REG D"},
+                {"NAND", "0x6", "---", "REG A-D", "A NAND B"},
+                {"OR",   "0x7", "---", "REG A-D", "A OR B"},
+                {"NOR",  "0x8", "---", "REG A-D", "A NOR B"},
+                {"XOR",  "0x9", "---", "REG A-D", "A XOR B"},
+                {"NOT",  "0xA", "REG A-B", "REG A-D", "NOT REG A"},
+                {"MOV",  "0xB", "REG A-D", "REG A-D", "REG A -> REG B"},
                 {"JUMP", "0xC", "---", "ADRES", "Jump 0x05"},
                 {"JZ",   "0xD", "---", "ADRES", "Jump if Zero"}
         };
