@@ -150,9 +150,9 @@ public class EducationView extends StackPane {
             segment.setFill(Color.WHITE);
 
             if (i % 2 != 0) {
-                segment.setFont(Font.font("System", FontWeight.BOLD, 14));
+                segment.setFont(Font.font("System", FontWeight.BOLD, 17));
             } else {
-                segment.setFont(Font.font("System", FontWeight.NORMAL, 14));
+                segment.setFont(Font.font("System", FontWeight.NORMAL, 16));
             }
             textFlow.getChildren().add(segment);
         }
