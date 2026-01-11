@@ -99,7 +99,7 @@ public class EducationView extends StackPane {
         lessonContentBox.getChildren().clear();
 
         // Zaktualizowany Pattern o nowe tagi: TABLE:ISA_OPCODES i OPCODE:DECODER
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|COMPILER:MODULE|ARCH:COMPARISON|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|COMPILER:MODULE|ARCH:COMPARISON||ARCH:COMPARISON|PC:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -123,6 +123,7 @@ public class EducationView extends StackPane {
                 case "OPCODE:DECODER" -> lessonContentBox.getChildren().add(new TheoryOpcodeDecoderView());
                 case "COMPILER:MODULE" -> lessonContentBox.getChildren().add(new TheoryInstructionCompilerView());
                 case "ARCH:COMPARISON" -> lessonContentBox.getChildren().add(new TheoryArchView());
+                case "PC:MODULE" -> lessonContentBox.getChildren().add(new TheoryPCView());
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));

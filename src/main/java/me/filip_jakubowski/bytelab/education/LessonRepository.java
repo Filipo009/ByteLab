@@ -133,7 +133,15 @@ public class LessonRepository {
                             "* **Wada:** Bardziej skomplikowana budowa fizyczna.\n\n" +
                             "--- Interaktywne porównanie ---\n" +
                             "Zobacz, jak przepływają informacje w obu systemach. Zwróć uwagę na ruch na magistralach (liniach):\n\n" +
-                            "[ARCH:COMPARISON]")
+                            "[ARCH:COMPARISON]"),
+
+            new Lesson("Licznik Rozkazów (PC)",
+                    "Skąd procesor wie, którą instrukcję wykonać jako następną? Służy do tego specjalny rejestr: **Program Counter (PC)**.\n\n" +
+                            "1. PC przechowuje **adres** pamięci, pod którym znajduje się instrukcja.\n" +
+                            "2. Po wykonaniu instrukcji, PC jest automatycznie zwiększany (inkrementowany).\n" +
+                            "3. Dzięki temu procesor idzie przez program jak po sznurku.\n\n" +
+                            "Przełącz widok na **BIN**, aby zobaczyć jak asembler wygląda w oczach maszyny:\n\n" +
+                            "[PC:MODULE]")
     );
 
     public static Lesson getLesson(int id) {
