@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 public class CommandSearchView extends VBox {
 
-    private final List<String> instructions = List.of("ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP");
+    private final List<String> instructions = List.of("ADD", "SUB", "AND", "NAND", "OR", "NOR", "XOR", "NOT", "MOV", "IN", "OUT", "JUMP", "JZ", "NOP");
     private final Map<String, List<String>> dataRegisters = new HashMap<>();
     private final Map<String, List<String>> targetRegisters = new HashMap<>();
 
@@ -82,7 +82,7 @@ public class CommandSearchView extends VBox {
                 default -> List.of("-----");
             });
             targetRegisters.put(instr, switch (instr) {
-                case "ADD", "SUB", "AND", "OR", "XOR", "NOT", "MOV", "IN" -> regList;
+                case "ADD", "SUB", "AND", "NAND", "OR", "NOR", "XOR", "NOT", "MOV", "IN" -> regList;
                 case "JUMP", "JZ" -> List.of("WPROWADŹ ADRES");
                 default -> List.of("-----");
             });

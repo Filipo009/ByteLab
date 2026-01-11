@@ -185,6 +185,8 @@ public class SimulationView extends VBox {
                 case "SUB" -> alu(args, (a, b) -> a - b);
                 case "AND" -> alu(args, (a, b) -> a & b);
                 case "OR"  -> alu(args, (a, b) -> a | b);
+                case "NAND" -> alu(args, (a, b) -> ~(a & b));
+                case "NOR"  -> alu(args, (a, b) -> ~(a | b));
                 case "XOR" -> alu(args, (a, b) -> a ^ b);
                 case "NOT" -> applyResult(args, (~registers.get("A")) & 0xFFFF);
                 case "MOV" -> { List<String> rs = findRegs(args); if (rs.size() >= 2) registers.put(rs.get(1), registers.get(rs.get(0))); }
