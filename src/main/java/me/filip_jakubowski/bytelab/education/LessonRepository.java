@@ -143,7 +143,7 @@ public class LessonRepository {
                             "Przełącz widok na **BIN**, aby zobaczyć jak asembler wygląda w oczach maszyny:\n\n" +
                             "[PC:MODULE]"),
             new Lesson(
-                    "Zaawansowane sterowanie i logika zerowa",
+                    "Skoki warunkowe",
                     "**UWAGA:** Ta lekcja dotyczy emulatora, do którego pełną instrukcję znajdziesz w menu bocznym.\n\n" +
 
                             "### 1. Rejestr Zerowy (REG 0)\n" +
