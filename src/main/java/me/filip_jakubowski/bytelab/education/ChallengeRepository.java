@@ -42,7 +42,7 @@ public class ChallengeRepository {
         ));
 
         challenges.add(new Challenge(
-                "Nieskończona pętla i kontrola przepływu",
+                "Nieskończona pętla",
                 "W tym zadaniu stworzysz program, który wykonuje serię operacji, a następnie wykorzystuje flagę Zero i instrukcję JZ (Jump if Zero), aby wrócić na sam początek (adres 0x00). To fundament działania każdego systemu operacyjnego!",
                 "1. Wprowadź dane do REGA i REGC.\n" +
                         "2. Wykonaj dodawanie do REGB i przemieszczaj wartości między rejestrami A, C i D.\n" +
@@ -63,7 +63,7 @@ public class ChallengeRepository {
         ));
 
         challenges.add(new Challenge(
-                "Implementacja pętli sterowanej",
+                "Pętla FOR",
                 "Twoim celem jest stworzenie programu, który będzie dodawał wartości w pętli. Wykorzystamy instrukcję JUMP do powrotu oraz JZ do przerwania pętli i wypisania wyniku na wyjście (OUT), gdy osiągniemy określony stan.",
                 "1. Zainicjalizuj rejestry B i C wartościami początkowymi (licznik i krok).\n" +
                         "2. Wykonaj operację ADD, która będzie kumulować wynik w REGA.\n" +

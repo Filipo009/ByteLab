@@ -26,6 +26,7 @@ public class EducationView extends StackPane {
     private final Button prevBtn = new Button("<");
     private final Button nextBtn = new Button(">");
     private int currentLessonId;
+    private int currentMode = 0;
 
     private final String STYLE_NORMAL = "-fx-background-color: transparent; -fx-text-fill: #cccccc; -fx-cursor: hand; -fx-padding: 5 10; -fx-alignment: CENTER_LEFT;";
     private final String STYLE_ACTIVE = "-fx-background-color: #34495e; -fx-text-fill: #3498db; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 5 10; -fx-alignment: CENTER_LEFT;";
@@ -140,41 +141,52 @@ public class EducationView extends StackPane {
         return btn;
     }
 
+    private void updateNavigationButtons(int currentId, int repoSize) {
+        prevBtn.setDisable(currentId <= 0);
+        nextBtn.setDisable(currentId >= repoSize - 1);
+    }
+
     private void loadLesson(int id) {
         if (id >= 0 && id < LessonRepository.size()) {
+            this.currentMode = 0;
             this.currentLessonId = id;
             LessonRepository.Lesson lesson = LessonRepository.getLesson(id);
             if (lesson != null) {
                 titleText.setText(lesson.title().toUpperCase());
                 parseAndSetContent(lesson.content());
-                prevBtn.setDisable(id == 0);
-                nextBtn.setDisable(id == LessonRepository.size() - 1);
+                updateNavigationButtons(id, LessonRepository.size());
                 refreshSidebar(0, id);
             }
         }
     }
 
     private void loadChallenge(int id) {
-        ChallengeRepository.Challenge challenge = ChallengeRepository.getChallenge(id);
-        if (challenge != null) {
-            titleText.setText("ZADANIE: " + challenge.title().toUpperCase());
-            lessonContentBox.getChildren().clear();
-            addTextSection(challenge.description());
-            lessonContentBox.getChildren().add(new TheoryChallengeView(challenge.steps(), challenge.solution()));
-            prevBtn.setDisable(true);
-            nextBtn.setDisable(true);
-            refreshSidebar(1, id);
+        if (id >= 0 && id < ChallengeRepository.size()) {
+            this.currentMode = 1;
+            this.currentLessonId = id;
+            ChallengeRepository.Challenge challenge = ChallengeRepository.getChallenge(id);
+            if (challenge != null) {
+                titleText.setText("ZADANIE: " + challenge.title().toUpperCase());
+                lessonContentBox.getChildren().clear();
+                addTextSection(challenge.description());
+                lessonContentBox.getChildren().add(new TheoryChallengeView(challenge.steps(), challenge.solution()));
+                updateNavigationButtons(id, ChallengeRepository.size());
+                refreshSidebar(1, id);
+            }
         }
     }
 
     private void loadManual(int id) {
-        InstructionRepository.Manual manual = InstructionRepository.getManual(id);
-        if (manual != null) {
-            titleText.setText(manual.title().toUpperCase());
-            parseAndSetContent(manual.content());
-            prevBtn.setDisable(true);
-            nextBtn.setDisable(true);
-            refreshSidebar(2, id);
+        if (id >= 0 && id < InstructionRepository.size()) {
+            this.currentMode = 2;
+            this.currentLessonId = id;
+            InstructionRepository.Manual manual = InstructionRepository.getManual(id);
+            if (manual != null) {
+                titleText.setText(manual.title().toUpperCase());
+                parseAndSetContent(manual.content());
+                updateNavigationButtons(id, InstructionRepository.size());
+                refreshSidebar(2, id);
+            }
         }
     }
 
@@ -337,7 +349,11 @@ public class EducationView extends StackPane {
     }
 
     private void navigate(int delta) {
-        int target = currentLessonId + delta;
-        if (target >= 0 && target < LessonRepository.size()) loadLesson(target);
+        int targetId = currentLessonId + delta;
+        switch (currentMode) {
+            case 0 -> loadLesson(targetId);
+            case 1 -> loadChallenge(targetId);
+            case 2 -> loadManual(targetId);
+        }
     }
 }
