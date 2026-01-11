@@ -21,7 +21,6 @@ public class TheoryPCAdvancedView extends VBox {
     private boolean isHalted = false;
     private final List<InstructionRow> program = new ArrayList<>();
 
-    // Rejestry i ich poprzednie wartości do śledzenia zmian
     private final Map<String, Integer> currentRegs = new HashMap<>();
     private final Map<String, Integer> lastRegs = new HashMap<>();
 
@@ -33,7 +32,7 @@ public class TheoryPCAdvancedView extends VBox {
     private final Text zeroFlagText = new Text("0");
     private final Circle zeroFlagLed = new Circle(6, Color.web("#3d0000"));
     private final Text pcDisplay = new Text("PC: 0000");
-    private final Text statusText = new Text("System gotowy. XOR sprawdzi teraz REGB i REGC.");
+    private final Text statusText = new Text("System gotowy.");
 
     public TheoryPCAdvancedView() {
         setAlignment(Pos.CENTER);
@@ -42,7 +41,6 @@ public class TheoryPCAdvancedView extends VBox {
         setMaxWidth(700);
         setStyle("-fx-background-color: #1a1a1a; -fx-border-color: #444; -fx-border-radius: 10;");
 
-        // Inicjalizacja stanów
         resetRegisters();
         setupProgram();
 
@@ -55,10 +53,14 @@ public class TheoryPCAdvancedView extends VBox {
         programBox.setAlignment(Pos.CENTER);
         program.forEach(row -> programBox.getChildren().add(row.view));
 
+        Text title = new Text("SYMULACJA: DETEKCJA ZMIAN I LOGIKA ZEROWA");
+        title.setFill(Color.WHITE);
+        title.setFont(Font.font("System", FontWeight.BOLD, 20));
+
         statusText.setFill(Color.web("#3498db"));
         statusText.setFont(Font.font("Consolas", 13));
 
-        getChildren().addAll(new Text("SYMULACJA: DETEKCJA ZMIAN I LOGIKA ZEROWA"), cpuPanel, programBox, controls, statusText);
+        getChildren().addAll(title, cpuPanel, programBox, controls, statusText);
         updateUI();
     }
 
@@ -73,39 +75,70 @@ public class TheoryPCAdvancedView extends VBox {
         program.add(new InstructionRow("0000", "IN 1 REGA",     "1010 0001"));
         program.add(new InstructionRow("0001", "IN 2 REGC",     "1010 0011"));
         program.add(new InstructionRow("0010", "ADD --- REGB",  "1100 0110"));
-        program.add(new InstructionRow("0011", "XOR REGB REGC", "1001 0110")); // Zmienione na REGB REGC
+        program.add(new InstructionRow("0011", "XOR REGB REGC", "1001 0110"));
         program.add(new InstructionRow("0100", "JZ 0x08",       "1101 1000"));
         program.add(new InstructionRow("0101", "ADD --- REGB",  "1100 0110"));
-        program.add(new InstructionRow("0110", "MOV REG0 REGA", "1011 0001"));
-        program.add(new InstructionRow("0111", "MOV REG0 REGB", "1011 0010"));
-        program.add(new InstructionRow("1000", "MOV REG0 REGC", "1011 0011"));
-        program.add(new InstructionRow("1001", "JZ 0x00",       "1101 0000"));
+        program.add(new InstructionRow("0110", "XOR REGB REGC", "1001 0110")); // Dodany XOR
+        program.add(new InstructionRow("0111", "MOV REG0 REGA", "1011 0001"));
+        program.add(new InstructionRow("1000", "MOV REG0 REGB", "1011 0010"));
+        program.add(new InstructionRow("1001", "MOV REG0 REGC", "1011 0011"));
     }
 
     private void step() {
         if (isHalted) return;
-        lastRegs.putAll(currentRegs); // Zapamiętaj stan przed zmianą
+        lastRegs.putAll(currentRegs);
 
         switch (pc) {
-            case 0 -> { currentRegs.put("REGA", 1); statusText.setText("Krok 0: Załadowano 1 do REGA."); }
-            case 1 -> { currentRegs.put("REGC", 2); statusText.setText("Krok 1: Załadowano 2 do REGC."); }
-            case 2 -> { currentRegs.put("REGB", 3); statusText.setText("Krok 2: A(1) + C(2) = 3 w REGB."); }
-            case 3 -> {
-                // XOR 3(11) i 2(10) = 1(01) -> Flaga Zero = 0
+            case 0 -> {
+                currentRegs.put("REGA", 1);
+                statusText.setText("Krok 0: REGA = 1.");
+            }
+            case 1 -> {
+                currentRegs.put("REGC", 2);
+                statusText.setText("Krok 1: REGC = 2.");
+            }
+            case 2 -> {
+                currentRegs.put("REGB", 1); // Poprawione: teraz 1 zamiast 3
                 setZeroFlag(false);
-                statusText.setText("Krok 3: XOR REGB(3), REGC(2) = 1. Flaga Zero pozostaje wyłączona.");
+                statusText.setText("Krok 2: ADD zapisał 1 do REGB. Z=0.");
+            }
+            case 3 -> {
+                setZeroFlag(false);
+                statusText.setText("Krok 3: XOR REGB(1), REGC(2) = 3. Z=0.");
             }
             case 4 -> {
                 if (zeroFlagText.getText().equals("1")) {
-                    statusText.setText("JZ: Flaga Z=1, skok do 0x08.");
-                    pc = 8; updateUI(); return;
+                    statusText.setText("JZ: Skok do 0x09.");
+                    pc = 9; updateUI(); return;
                 }
-                statusText.setText("JZ: Flaga Z=0, brak skoku. Idziemy dalej.");
+                statusText.setText("JZ: Brak skoku (Z=0).");
             }
-            case 6 -> { currentRegs.put("REGA", 0); statusText.setText("Krok 6: Wyzerowano REGA używając REG0."); }
-            case 7 -> { currentRegs.put("REGB", 0); statusText.setText("Krok 7: Wyzerowano REGB używając REG0."); }
-            case 8 -> { currentRegs.put("REGC", 0); statusText.setText("Krok 8: Wyzerowano REGC używając REG0."); }
-            case 9 -> { pc = 0; setZeroFlag(false); statusText.setText("Pętla zakończona. Powrót do startu."); updateUI(); return; }
+            case 5 -> {
+                currentRegs.put("REGB", 2);
+                setZeroFlag(false);
+                statusText.setText("Krok 5: ADD zapisał 2 do REGB.");
+            }
+            case 6 -> {
+                // XOR REGB(2) REGC(2) = 0
+                setZeroFlag(true);
+                statusText.setText("Krok 6: XOR REGB(2), REGC(2) = 0. Flaga Z=1!");
+            }
+            case 7 -> {
+                currentRegs.put("REGA", 0);
+                setZeroFlag(true);
+                statusText.setText("Krok 7: Wyzerowano REGA.");
+            }
+            case 8 -> {
+                currentRegs.put("REGB", 0);
+                setZeroFlag(true);
+                statusText.setText("Krok 8: Wyzerowano REGB.");
+            }
+            case 9 -> {
+                currentRegs.put("REGC", 0);
+                setZeroFlag(true);
+                statusText.setText("Krok 9: Wyzerowano REGC. Restart pętli.");
+                pc = 0; updateUI(); return;
+            }
         }
 
         pc++;
@@ -113,13 +146,13 @@ public class TheoryPCAdvancedView extends VBox {
     }
 
     private void updateUI() {
-        pcDisplay.setText("PC: " + (pc < program.size() ? program.get(pc).addr : "HALT"));
+        pcDisplay.setText("PC: " + (pc < program.size() ? program.get(pc).addr : "0000"));
 
         updateRegText(regA, "REGA", currentRegs.get("REGA"));
         updateRegText(regB, "REGB", currentRegs.get("REGB"));
         updateRegText(regC, "REGC", currentRegs.get("REGC"));
 
-        reg0.setFill(Color.WHITE); // REG0 zawsze na biało
+        reg0.setFill(Color.WHITE);
 
         for (int i = 0; i < program.size(); i++) {
             program.get(i).update(i == pc, isBinaryMode);
@@ -128,7 +161,6 @@ public class TheoryPCAdvancedView extends VBox {
 
     private void updateRegText(Text textNode, String key, int val) {
         textNode.setText(String.format("%s: %04d", key, val));
-        // Jeśli wartość się zmieniła względem poprzedniego kroku - koloruj na czerwono
         if (!currentRegs.get(key).equals(lastRegs.get(key))) {
             textNode.setFill(Color.web("#e74c3c"));
             textNode.setStyle("-fx-font-weight: bold;");
@@ -157,7 +189,6 @@ public class TheoryPCAdvancedView extends VBox {
         panel.setPadding(new Insets(15));
         panel.setStyle("-fx-background-color: #222; -fx-border-color: #3498db; -fx-border-radius: 5;");
 
-        // Sekcja PC
         VBox pcBox = new VBox(2);
         pcBox.setAlignment(Pos.CENTER);
         Text pcLabel = new Text("PROGRAM COUNTER");
@@ -167,7 +198,6 @@ public class TheoryPCAdvancedView extends VBox {
         pcDisplay.setFont(Font.font("Consolas", FontWeight.BOLD, 22));
         pcBox.getChildren().addAll(pcLabel, pcDisplay);
 
-        // Sekcja Flagi (Zmieniono VBox na HBox)
         HBox flagBox = new HBox(8);
         flagBox.setAlignment(Pos.CENTER);
         Text zLabel = new Text("Z-FLAG:");
@@ -175,11 +205,9 @@ public class TheoryPCAdvancedView extends VBox {
         zeroFlagText.setFill(Color.WHITE);
         flagBox.getChildren().addAll(zLabel, zeroFlagLed, zeroFlagText);
 
-        // Kontener dla PC i Flagi (układ pionowy)
         VBox pcAndFlags = new VBox(10, pcBox, flagBox);
         pcAndFlags.setAlignment(Pos.CENTER);
 
-        // Sekcja Rejestrów
         VBox regs = new VBox(5, regA, regB, regC, reg0);
         for (Text r : new Text[]{regA, regB, regC, reg0}) {
             r.setFont(Font.font("Consolas", 14));
