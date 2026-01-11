@@ -2,6 +2,7 @@ package me.filip_jakubowski.bytelab;
 
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -74,11 +75,27 @@ public class NavigationManager {
         switchRoot(view, 1000, 750);
     }
 
+    /**
+     * Otwiera schemat architektury komputera w osobnym oknie systemowym.
+     * Pozwala to na podgląd schematu podczas pracy w emulatorze na drugim monitorze.
+     */
     public void openDiagramWindow() {
-        if (stage.getScene() != null) {
-            DiagramView view = new DiagramView(stage.getScene());
-            switchRoot(view, 1000, 750);
-        }
+        Stage secondStage = new Stage();
+        secondStage.setTitle("ByteLab - Schemat Architektury");
+
+        // StackPane służy jako kontener dla widoku diagramu
+        StackPane root = new StackPane();
+        Scene scene = new Scene(root, 1000, 700);
+        applyStyles(scene);
+
+        // DiagramView dostosowuje skalę obrazu do wielkości nowej sceny
+        DiagramView diagramView = new DiagramView(scene);
+        root.getChildren().add(diagramView);
+
+        secondStage.setScene(scene);
+
+        // Okno otwiera się niezależnie od głównego okna aplikacji
+        secondStage.show();
     }
 
     private void applyStyles(Scene scene) {
