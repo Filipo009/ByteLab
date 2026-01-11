@@ -13,11 +13,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javafx.scene.text.TextFlow;
 import javafx.scene.text.FontWeight;
+import me.filip_jakubowski.bytelab.logicgame.LogicGameView;
 
 public class EducationView extends StackPane {
     private final Text titleText = new Text();
     private final VBox lessonContentBox = new VBox(25);
-    private final ListView<String> lessonList = new ListView<>();
+    private final VBox sidebarListContainer = new VBox(2);
     private final ScrollPane scrollPane = new ScrollPane();
     private final HBox mainLayout = new HBox();
     private final VBox sidebar = new VBox(10);
@@ -29,6 +30,7 @@ public class EducationView extends StackPane {
     public EducationView(int startLessonId) {
         this.currentLessonId = startLessonId;
         getStyleClass().add("root");
+
         Button expandBtn = new Button(">");
         expandBtn.setPrefSize(30, 30);
         expandBtn.setVisible(false);
@@ -38,18 +40,23 @@ public class EducationView extends StackPane {
         sidebar.setPadding(new Insets(15));
         sidebar.setPrefWidth(250);
         sidebar.setMinWidth(250);
+
         HBox sidebarHeader = new HBox();
         sidebarHeader.setAlignment(Pos.CENTER_LEFT);
         Label sidebarLabel = new Label("SPIS TREŚCI");
         sidebarLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #888888;");
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Button collapseBtn = new Button("<");
         collapseBtn.setPrefSize(30, 30);
         sidebarHeader.getChildren().addAll(sidebarLabel, spacer, collapseBtn);
-        lessonList.setItems(FXCollections.observableArrayList(LessonRepository.getTitles()));
-        lessonList.getSelectionModel().select(currentLessonId);
-        VBox.setVgrow(lessonList, Priority.ALWAYS);
+
+        ScrollPane sidebarScroll = new ScrollPane(sidebarListContainer);
+        sidebarScroll.setFitToWidth(true);
+        sidebarScroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        VBox.setVgrow(sidebarScroll, Priority.ALWAYS);
+
         HBox controls = new HBox(10);
         controls.setAlignment(Pos.CENTER);
         Button menuBtn = new Button("Menu");
@@ -60,26 +67,64 @@ public class EducationView extends StackPane {
         menuBtn.setOnAction(e -> MainApp.getNavigationManager().showStartScreen());
         nextBtn.setOnAction(e -> navigate(1));
         controls.getChildren().addAll(prevBtn, menuBtn, nextBtn);
-        sidebar.getChildren().addAll(sidebarHeader, lessonList, controls);
+
+        sidebar.getChildren().addAll(sidebarHeader, sidebarScroll, controls);
+
         contentArea.setAlignment(Pos.TOP_CENTER);
         contentArea.setPadding(new Insets(40));
         HBox.setHgrow(contentArea, Priority.ALWAYS);
+
         titleText.setFont(Font.font("Consolas", 32));
         titleText.setStyle("-fx-fill: #007acc; -fx-font-weight: bold;");
+
         lessonContentBox.setAlignment(Pos.TOP_CENTER);
         scrollPane.setContent(lessonContentBox);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
         contentArea.getChildren().addAll(titleText, scrollPane);
         mainLayout.getChildren().addAll(sidebar, contentArea);
+
         collapseBtn.setOnAction(e -> { mainLayout.getChildren().remove(sidebar); expandBtn.setVisible(true); });
         expandBtn.setOnAction(e -> { mainLayout.getChildren().add(0, sidebar); expandBtn.setVisible(false); });
+
         getChildren().addAll(mainLayout, expandBtn);
-        lessonList.getSelectionModel().selectedIndexProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.intValue() != -1) loadLesson(newVal.intValue());
-        });
+
+        refreshSidebar();
         loadLesson(currentLessonId);
+    }
+
+    private void refreshSidebar() {
+        sidebarListContainer.getChildren().clear();
+
+        sidebarListContainer.getChildren().add(createSectionLabel("LEKCJE TEORETYCZNE"));
+        for (int i = 0; i < LessonRepository.size(); i++) {
+            sidebarListContainer.getChildren().add(createMenuButton(LessonRepository.getLesson(i).title(), i, true));
+        }
+
+        sidebarListContainer.getChildren().add(createSectionLabel("INSTRUKCJE OBSŁUGI"));
+        for (int i = 0; i < InstructionRepository.size(); i++) {
+            sidebarListContainer.getChildren().add(createMenuButton(InstructionRepository.getManual(i).title(), i, false));
+        }
+    }
+
+    private Label createSectionLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-weight: bold; -fx-text-fill: #ffffff; -fx-padding: 15 5 5 5; -fx-font-size: 13px;");
+        return label;
+    }
+
+    private Button createMenuButton(String title, int id, boolean isLesson) {
+        Button btn = new Button(title);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setAlignment(Pos.CENTER_LEFT);
+        btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cccccc; -fx-cursor: hand; -fx-padding: 5 10;");
+        btn.setOnAction(e -> {
+            if (isLesson) loadLesson(id);
+            else loadManual(id);
+        });
+        return btn;
     }
 
     private void loadLesson(int id) {
@@ -89,18 +134,26 @@ public class EducationView extends StackPane {
             if (lesson != null) {
                 titleText.setText(lesson.title().toUpperCase());
                 parseAndSetContent(lesson.content());
-                lessonList.getSelectionModel().select(id);
                 prevBtn.setDisable(id == 0);
                 nextBtn.setDisable(id == LessonRepository.size() - 1);
             }
         }
     }
 
+    private void loadManual(int id) {
+        InstructionRepository.Manual manual = InstructionRepository.getManual(id);
+        if (manual != null) {
+            titleText.setText(manual.title().toUpperCase());
+            parseAndSetContent(manual.content());
+            prevBtn.setDisable(true);
+            nextBtn.setDisable(true);
+        }
+    }
+
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
 
-        // Zaktualizowany Pattern o nowe tagi: TABLE:ISA_OPCODES i OPCODE:DECODER
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|COMPILER:MODULE|ARCH:COMPARISON||ARCH:COMPARISON|PC:MODULE|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|LOGIC_GAME:MODULE|COMPILER:MODULE|ARCH:COMPARISON|PC:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -125,6 +178,17 @@ public class EducationView extends StackPane {
                 case "COMPILER:MODULE" -> lessonContentBox.getChildren().add(new TheoryInstructionCompilerView());
                 case "ARCH:COMPARISON" -> lessonContentBox.getChildren().add(new TheoryArchView());
                 case "PC:MODULE" -> lessonContentBox.getChildren().add(new TheoryPCView());
+                case "TABLE:REGISTERS_SHORT" -> lessonContentBox.getChildren().add(createRegistersTable());
+                case "LOGIC_GAME:MODULE" -> {
+                    LogicGameView game = new LogicGameView();
+                    game.setBottom(null);
+                    Button resetBtn = new Button("RESETUJ PLANSZĘ");
+                    resetBtn.setStyle("-fx-background-color: #2c3e50; -fx-text-fill: white; -fx-font-weight: bold;");
+                    resetBtn.setOnAction(e -> game.resetGame());
+                    VBox container = new VBox(15, game, resetBtn);
+                    container.setAlignment(Pos.CENTER);
+                    lessonContentBox.getChildren().add(container);
+                }
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
@@ -138,25 +202,16 @@ public class EducationView extends StackPane {
 
     private void addTextSection(String text) {
         if (text == null || text.isEmpty()) return;
-
         TextFlow textFlow = new TextFlow();
-        textFlow.setLineSpacing(5.0); // Wymagany double (z kropką)
+        textFlow.setLineSpacing(5.0);
         textFlow.setPadding(new Insets(10, 0, 10, 0));
-
         String[] parts = text.split("\\*\\*");
-
         for (int i = 0; i < parts.length; i++) {
             Text segment = new Text(parts[i]);
             segment.setFill(Color.WHITE);
-
-            if (i % 2 != 0) {
-                segment.setFont(Font.font("System", FontWeight.BOLD, 17));
-            } else {
-                segment.setFont(Font.font("System", FontWeight.NORMAL, 16));
-            }
+            segment.setFont(Font.font("System", i % 2 != 0 ? FontWeight.BOLD : FontWeight.NORMAL, i % 2 != 0 ? 17 : 16));
             textFlow.getChildren().add(segment);
         }
-
         lessonContentBox.getChildren().add(textFlow);
     }
 
@@ -165,7 +220,6 @@ public class EducationView extends StackPane {
         table.setStyle("-fx-border-color: #444; -fx-background-color: #1a1a1a; -fx-border-radius: 5;");
         table.setMaxWidth(750);
         table.setAlignment(Pos.CENTER);
-
         HBox header = new HBox(10,
                 createTableCell("INSTRUKCJA", 100, true),
                 createTableCell("OPCODE", 80, true),
@@ -176,7 +230,6 @@ public class EducationView extends StackPane {
         header.setStyle("-fx-background-color: #2c3e50; -fx-padding: 8; -fx-background-radius: 5 5 0 0;");
         header.setAlignment(Pos.CENTER_LEFT);
         table.getChildren().add(header);
-
         String[][] data = {
                 {"NOP",  "0x0", "---", "---", "No Operation"},
                 {"IN",   "0x1", "INPUT HEX", "REG A-D", "0xFF -> REG A"},
@@ -193,7 +246,6 @@ public class EducationView extends StackPane {
                 {"JUMP", "0xC", "---", "ADRES", "Jump 0x05"},
                 {"JZ",   "0xD", "---", "ADRES", "Jump if Zero"}
         };
-
         for (String[] row : data) {
             HBox rowUI = new HBox(10,
                     createTableCell(row[0], 100, false),
@@ -209,13 +261,54 @@ public class EducationView extends StackPane {
         return table;
     }
 
+    private VBox createRegistersTable() {
+        VBox table = new VBox(1);
+        table.setStyle("-fx-border-color: #444; -fx-background-color: #1a1a1a; -fx-border-radius: 5;");
+        table.setMaxWidth(600);
+        table.setAlignment(Pos.CENTER);
+
+        double[] widths = {120, 180, 250};
+
+        HBox header = new HBox(10,
+                createTableCell("REJESTR", widths[0], true),
+                createTableCell("NAZWA PEŁNA", widths[1], true),
+                createTableCell("FUNKCJA", widths[2], true)
+        );
+        header.setStyle("-fx-background-color: #2c3e50; -fx-padding: 8; -fx-background-radius: 5 5 0 0;");
+        table.getChildren().add(header);
+
+        String[][] data = {
+                {"REG A", "Accumulator A", "Główny rejestr operacyjny"},
+                {"REG B", "Accumulator B", "Drugi argument operacji ALU"},
+                {"REG C", "General Purpose", "Przechowywanie danych"},
+                {"REG D", "General Purpose", "Przechowywanie adresów"},
+                {"PC",    "Program Counter", "Adres następnej instrukcji"},
+                {"IR",    "Instruction Reg", "Obecny kod operacji"}
+        };
+
+        for (String[] row : data) {
+            HBox rowUI = new HBox(10,
+                    createTableCell(row[0], widths[0], false),
+                    createTableCell(row[1], widths[1], false),
+                    createTableCell(row[2], widths[2], false)
+            );
+            rowUI.setStyle("-fx-padding: 5; -fx-border-color: #333; -fx-border-width: 0 0 1 0;");
+            table.getChildren().add(rowUI);
+        }
+        return table;
+    }
+
     private StackPane createTableCell(String val, double w, boolean header) {
         Text t = new Text(val);
         t.setFill(header ? Color.web("#3498db") : Color.WHITE);
-        t.setFont(Font.font("Consolas", header ? 13 : 12));
+        t.setFont(Font.font("Consolas", header ? FontWeight.BOLD : FontWeight.NORMAL, 13));
+
         StackPane sp = new StackPane(t);
+        sp.setMinWidth(w);
         sp.setPrefWidth(w);
-        sp.setAlignment(Pos.CENTER_LEFT);
+        sp.setMaxWidth(w);
+        sp.setAlignment(Pos.CENTER_LEFT); // Tekst zaczyna się od lewej strony komórki
+
         return sp;
     }
 

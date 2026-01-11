@@ -59,7 +59,7 @@ public class LogicGameView extends BorderPane {
         setBottom(bottomActions);
     }
 
-    private void resetGame() {
+    public void resetGame() {
         gameOver = false;
         isGreenTurn = true;
         for (int row = 0; row < 3; row++) {
