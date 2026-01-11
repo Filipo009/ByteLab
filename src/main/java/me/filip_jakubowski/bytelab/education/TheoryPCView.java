@@ -90,7 +90,7 @@ public class TheoryPCView extends VBox {
         // PC 4-bitowy: adresy od 0000 do 1111
         program.add(new InstructionRow("0000", "IN 1, REGA", "1010 0001"));
         program.add(new InstructionRow("0001", "IN 2, REGB", "1010 0010"));
-        program.add(new InstructionRow("0010", "ADD REGA, REGB", "1100 0110"));
+        program.add(new InstructionRow("0010", "ADD ---, REGB", "1100 0110"));
         program.add(new InstructionRow("0011", "OUT REGC", "1110 0011"));
         program.add(new InstructionRow("0100", "HLT",      "0000 0000")); // Zatrzymanie procesora
     }

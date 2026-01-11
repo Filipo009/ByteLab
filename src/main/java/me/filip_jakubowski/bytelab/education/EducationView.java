@@ -161,7 +161,7 @@ public class EducationView extends StackPane {
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
 
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|LOGIC_GAME:MODULE|COMPILER:MODULE|ARCH:COMPARISON|PC:MODULE|GATE:[a-z]+)\\]");
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|TABLE:REGISTERS_SHORT|OPCODE:DECODER|LOGIC_GAME:MODULE|COMPILER:MODULE|ARCH:COMPARISON|PC:MODULE|ADVANCED_PC:MODULE|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -187,6 +187,7 @@ public class EducationView extends StackPane {
                 case "ARCH:COMPARISON" -> lessonContentBox.getChildren().add(new TheoryArchView());
                 case "PC:MODULE" -> lessonContentBox.getChildren().add(new TheoryPCView());
                 case "TABLE:REGISTERS_SHORT" -> lessonContentBox.getChildren().add(createRegistersTable());
+                case "ADVANCED_PC:MODULE" -> lessonContentBox.getChildren().add(new TheoryPCAdvancedView());
                 case "LOGIC_GAME:MODULE" -> {
                     LogicGameView game = new LogicGameView();
                     game.setBottom(null);

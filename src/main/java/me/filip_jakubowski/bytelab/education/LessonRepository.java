@@ -141,7 +141,21 @@ public class LessonRepository {
                             "2. Po wykonaniu instrukcji, PC jest automatycznie zwiększany (inkrementowany).\n" +
                             "3. Dzięki temu procesor idzie przez program jak po sznurku.\n\n" +
                             "Przełącz widok na **BIN**, aby zobaczyć jak asembler wygląda w oczach maszyny:\n\n" +
-                            "[PC:MODULE]")
+                            "[PC:MODULE]"),
+            new Lesson(
+                    "Zaawansowane sterowanie i logika zerowa",
+                    "**UWAGA:** Ta lekcja dotyczy emulatora, do którego pełną instrukcję znajdziesz w menu bocznym.\n\n" +
+
+                            "### 1. Rejestr Zerowy (REG 0)\n" +
+                            "Rejestr **REG 0** jest sprzętowo zablokowany na wartości `0x0000`. Służy jako źródło zera oraz 'śmietnik' dla wyników operacji.\n\n" +
+
+                            "### 2. Flaga Zero (Z) i operacje ALU\n" +
+                            "Flaga Zero to wskaźnik stanu. **Z=1** tylko wtedy, gdy wynik operacji ALU (ADD, SUB, XOR itp.) wyniósł dokładnie zero.\n\n" +
+
+                            "### 3. Wizualizacja przepływu (XOR i JZ)\n" +
+                            "Poniższy moduł pokazuje, jak instrukcja `XOR REGA REGB` (przy identycznych wartościach) ustawia flagę Zero, co pozwala instrukcji `JZ` na wykonanie skoku.\n\n" +
+                            "[ADVANCED_PC:MODULE]\n\n"
+            )
     );
 
     public static Lesson getLesson(int id) {
