@@ -27,6 +27,10 @@ public class EducationView extends StackPane {
     private final Button nextBtn = new Button(">");
     private int currentLessonId;
 
+    // Stałe kolorystyczne dla podświetlenia
+    private final String STYLE_NORMAL = "-fx-background-color: transparent; -fx-text-fill: #cccccc; -fx-cursor: hand; -fx-padding: 5 10; -fx-alignment: CENTER_LEFT;";
+    private final String STYLE_ACTIVE = "-fx-background-color: #34495e; -fx-text-fill: #3498db; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 5 10; -fx-alignment: CENTER_LEFT;";
+
     public EducationView(int startLessonId) {
         this.currentLessonId = startLessonId;
         getStyleClass().add("root");
@@ -91,21 +95,24 @@ public class EducationView extends StackPane {
 
         getChildren().addAll(mainLayout, expandBtn);
 
-        refreshSidebar();
-        loadLesson(currentLessonId);
+        loadLesson(currentLessonId); // loadLesson wywoła refreshSidebar, więc kolejność ma znaczenie
     }
 
-    private void refreshSidebar() {
+    private void refreshSidebar(boolean isLessonMode, int activeId) {
         sidebarListContainer.getChildren().clear();
 
         sidebarListContainer.getChildren().add(createSectionLabel("LEKCJE TEORETYCZNE"));
         for (int i = 0; i < LessonRepository.size(); i++) {
-            sidebarListContainer.getChildren().add(createMenuButton(LessonRepository.getLesson(i).title(), i, true));
+            Button btn = createMenuButton(LessonRepository.getLesson(i).title(), i, true);
+            if (isLessonMode && i == activeId) btn.setStyle(STYLE_ACTIVE);
+            sidebarListContainer.getChildren().add(btn);
         }
 
         sidebarListContainer.getChildren().add(createSectionLabel("INSTRUKCJE OBSŁUGI"));
         for (int i = 0; i < InstructionRepository.size(); i++) {
-            sidebarListContainer.getChildren().add(createMenuButton(InstructionRepository.getManual(i).title(), i, false));
+            Button btn = createMenuButton(InstructionRepository.getManual(i).title(), i, false);
+            if (!isLessonMode && i == activeId) btn.setStyle(STYLE_ACTIVE);
+            sidebarListContainer.getChildren().add(btn);
         }
     }
 
@@ -118,8 +125,7 @@ public class EducationView extends StackPane {
     private Button createMenuButton(String title, int id, boolean isLesson) {
         Button btn = new Button(title);
         btn.setMaxWidth(Double.MAX_VALUE);
-        btn.setAlignment(Pos.CENTER_LEFT);
-        btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cccccc; -fx-cursor: hand; -fx-padding: 5 10;");
+        btn.setStyle(STYLE_NORMAL);
         btn.setOnAction(e -> {
             if (isLesson) loadLesson(id);
             else loadManual(id);
@@ -136,6 +142,7 @@ public class EducationView extends StackPane {
                 parseAndSetContent(lesson.content());
                 prevBtn.setDisable(id == 0);
                 nextBtn.setDisable(id == LessonRepository.size() - 1);
+                refreshSidebar(true, id); // Aktualizacja podświetlenia
             }
         }
     }
@@ -147,6 +154,7 @@ public class EducationView extends StackPane {
             parseAndSetContent(manual.content());
             prevBtn.setDisable(true);
             nextBtn.setDisable(true);
+            refreshSidebar(false, id); // Aktualizacja podświetlenia
         }
     }
 
@@ -232,17 +240,17 @@ public class EducationView extends StackPane {
         table.getChildren().add(header);
         String[][] data = {
                 {"NOP",  "0x0", "---", "---", "No Operation"},
-                {"IN",   "0x1", "INPUT HEX", "REG A-D", "0xFF -> REG A"},
-                {"OUT",  "0x2", "REG A-D", "---", "REG B -> OUT"},
-                {"ADD",  "0x3", "---", "REG A-D", "A + B -> REG C"},
-                {"SUB",  "0x4", "---", "REG A-D", "A - B -> REG A"},
-                {"AND",  "0x5", "---", "REG A-D", "A AND B -> REG D"},
-                {"NAND", "0x6", "---", "REG A-D", "A NAND B"},
-                {"OR",   "0x7", "---", "REG A-D", "A OR B"},
-                {"NOR",  "0x8", "---", "REG A-D", "A NOR B"},
-                {"XOR",  "0x9", "---", "REG A-D", "A XOR B"},
-                {"NOT",  "0xA", "REG A-B", "REG A-D", "NOT REG A"},
-                {"MOV",  "0xB", "REG A-D", "REG A-D", "REG A -> REG B"},
+                {"IN",   "0x1", "INPUT HEX", "REG A-E", "0xFF -> REG A"},
+                {"OUT",  "0x2", "REG A-E", "---", "REG B -> OUT"},
+                {"ADD",  "0x3", "---", "REG A-E", "A + B -> REG C"},
+                {"SUB",  "0x4", "---", "REG A-E", "A - B -> REG A"},
+                {"AND",  "0x5", "---", "REG A-E", "A AND B -> REG D"},
+                {"NAND", "0x6", "---", "REG A-E", "A NAND B"},
+                {"OR",   "0x7", "---", "REG A-E", "A OR B"},
+                {"NOR",  "0x8", "---", "REG A-E", "A NOR B"},
+                {"XOR",  "0x9", "---", "REG A-E", "A XOR B"},
+                {"NOT",  "0xA", "REG A-B", "REG A-E", "NOT REG A"},
+                {"MOV",  "0xB", "REG A-E", "REG A-E", "REG A -> REG B"},
                 {"JUMP", "0xC", "---", "ADRES", "Jump 0x05"},
                 {"JZ",   "0xD", "---", "ADRES", "Jump if Zero"}
         };
@@ -278,12 +286,14 @@ public class EducationView extends StackPane {
         table.getChildren().add(header);
 
         String[][] data = {
+                {"REG 0", "Zero Register", "Zawsze zwraca 0x0000"},
                 {"REG A", "Accumulator A", "Główny rejestr operacyjny"},
                 {"REG B", "Accumulator B", "Drugi argument operacji ALU"},
                 {"REG C", "General Purpose", "Przechowywanie danych"},
-                {"REG D", "General Purpose", "Przechowywanie adresów"},
+                {"REG D", "General Purpose", "Przechowywanie danych"},
+                {"REG E", "General Purpose", "Przechowywanie danych"},
                 {"PC",    "Program Counter", "Adres następnej instrukcji"},
-                {"IR",    "Instruction Reg", "Obecny kod operacji"}
+                {"OUT",   "Output Reg", "Wyjście symulatora"}
         };
 
         for (String[] row : data) {
@@ -307,7 +317,7 @@ public class EducationView extends StackPane {
         sp.setMinWidth(w);
         sp.setPrefWidth(w);
         sp.setMaxWidth(w);
-        sp.setAlignment(Pos.CENTER_LEFT); // Tekst zaczyna się od lewej strony komórki
+        sp.setAlignment(Pos.CENTER_LEFT);
 
         return sp;
     }
