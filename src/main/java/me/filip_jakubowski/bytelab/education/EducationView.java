@@ -8,10 +8,11 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import me.filip_jakubowski.bytelab.MainApp;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javafx.scene.text.TextFlow;
+import javafx.scene.text.FontWeight;
 
 public class EducationView extends StackPane {
     private final Text titleText = new Text();
@@ -136,16 +137,28 @@ public class EducationView extends StackPane {
     }
 
     private void addTextSection(String text) {
-        if (text == null || text.trim().isEmpty()) return;
-        Text t = new Text(text.trim());
-        t.setFont(Font.font("Consolas", 18));
-        t.setStyle("-fx-fill: #e0e0e0;");
-        t.setWrappingWidth(700); // Zwiększone dla lepszej czytelności przy tabelach
-        t.setTextAlignment(TextAlignment.CENTER);
-        lessonContentBox.getChildren().add(t);
-    }
+        if (text == null || text.isEmpty()) return;
 
-    // --- NOWE METODY DLA TABELI ISA ---
+        TextFlow textFlow = new TextFlow();
+        textFlow.setLineSpacing(5.0); // Wymagany double (z kropką)
+        textFlow.setPadding(new Insets(10, 0, 10, 0));
+
+        String[] parts = text.split("\\*\\*");
+
+        for (int i = 0; i < parts.length; i++) {
+            Text segment = new Text(parts[i]);
+            segment.setFill(Color.WHITE);
+
+            if (i % 2 != 0) {
+                segment.setFont(Font.font("System", FontWeight.BOLD, 14));
+            } else {
+                segment.setFont(Font.font("System", FontWeight.NORMAL, 14));
+            }
+            textFlow.getChildren().add(segment);
+        }
+
+        lessonContentBox.getChildren().add(textFlow);
+    }
 
     private VBox createISATable() {
         VBox table = new VBox(1);
