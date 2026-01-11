@@ -241,15 +241,29 @@ public class EducationView extends StackPane {
     }
 
     private void addTextSection(String text) {
-        if (text == null || text.isEmpty()) return;
+        if (text == null || text.trim().isEmpty()) return;
+
+        // OCZYSZCZANIE: Usuwanie znaczników nagłówków i matematycznych
+        String cleanText = text.replaceAll("###", "")
+                .replaceAll("\\$", "")
+                .trim();
+
         TextFlow textFlow = new TextFlow();
         textFlow.setLineSpacing(5.0);
         textFlow.setPadding(new Insets(10, 0, 10, 0));
-        String[] parts = text.split("\\*\\*");
+
+        // PARSOWANIE POGRUBIENIA (**)
+        String[] parts = cleanText.split("\\*\\*");
         for (int i = 0; i < parts.length; i++) {
             Text segment = new Text(parts[i]);
             segment.setFill(Color.WHITE);
-            segment.setFont(Font.font("System", i % 2 != 0 ? FontWeight.BOLD : FontWeight.NORMAL, i % 2 != 0 ? 17 : 16));
+
+            // Jeśli element był między **, stosujemy styl pogrubiony
+            if (i % 2 != 0) {
+                segment.setFont(Font.font("System", FontWeight.BOLD, 17));
+            } else {
+                segment.setFont(Font.font("System", FontWeight.NORMAL, 16));
+            }
             textFlow.getChildren().add(segment);
         }
         lessonContentBox.getChildren().add(textFlow);
