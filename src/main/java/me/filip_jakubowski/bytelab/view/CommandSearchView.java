@@ -259,3 +259,4 @@ public class CommandSearchView extends VBox {
 
     public ListView<String> getCompletedCommandsListView() { return completedCommands; }
 }
+

@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
@@ -97,7 +98,8 @@ public class EducationView extends StackPane {
     private void parseAndSetContent(String content) {
         lessonContentBox.getChildren().clear();
 
-        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|GATE:[a-z]+)\\]");
+        // Zaktualizowany Pattern o nowe tagi: TABLE:ISA_OPCODES i OPCODE:DECODER
+        Pattern pattern = Pattern.compile("\\[(BINARY|BINARY:U2|ALU:ADDER|ALU:FULL|ALU:LOGIC|SHIFT:MODULE|REGISTER:MODULE|RAM:MODULE|BUS:MODULE|BUS:COMPLEX|INSTR:VIEW|TABLE:ISA_OPCODES|OPCODE:DECODER|GATE:[a-z]+)\\]");
         Matcher matcher = pattern.matcher(content);
         int lastEnd = 0;
 
@@ -117,6 +119,8 @@ public class EducationView extends StackPane {
                 case "BUS:MODULE" -> lessonContentBox.getChildren().add(new TheoryBusView());
                 case "BUS:COMPLEX" -> lessonContentBox.getChildren().add(new TheoryComplexBusView());
                 case "INSTR:VIEW" -> lessonContentBox.getChildren().add(new TheoryInstructionView());
+                case "TABLE:ISA_OPCODES" -> lessonContentBox.getChildren().add(createISATable());
+                case "OPCODE:DECODER" -> lessonContentBox.getChildren().add(new TheoryOpcodeDecoderView());
                 default -> {
                     if (tag.startsWith("GATE:")) {
                         lessonContentBox.getChildren().add(new TheoryGateView(tag.split(":")[1]));
@@ -133,9 +137,70 @@ public class EducationView extends StackPane {
         Text t = new Text(text.trim());
         t.setFont(Font.font("Consolas", 18));
         t.setStyle("-fx-fill: #e0e0e0;");
-        t.setWrappingWidth(650);
+        t.setWrappingWidth(700); // Zwiększone dla lepszej czytelności przy tabelach
         t.setTextAlignment(TextAlignment.CENTER);
         lessonContentBox.getChildren().add(t);
+    }
+
+    // --- NOWE METODY DLA TABELI ISA ---
+
+    private VBox createISATable() {
+        VBox table = new VBox(1);
+        table.setStyle("-fx-border-color: #444; -fx-background-color: #1a1a1a; -fx-border-radius: 5;");
+        table.setMaxWidth(750);
+        table.setAlignment(Pos.CENTER);
+
+        HBox header = new HBox(10,
+                createTableCell("INSTRUKCJA", 100, true),
+                createTableCell("OPCODE", 80, true),
+                createTableCell("DANE", 120, true),
+                createTableCell("CEL", 120, true),
+                createTableCell("PRZYKŁAD", 200, true)
+        );
+        header.setStyle("-fx-background-color: #2c3e50; -fx-padding: 8; -fx-background-radius: 5 5 0 0;");
+        header.setAlignment(Pos.CENTER_LEFT);
+        table.getChildren().add(header);
+
+        String[][] data = {
+                {"NOP",  "0x0", "---", "---", "No Operation"},
+                {"IN",   "0x1", "HEX", "REG A-E", "0xFF -> REG A"},
+                {"OUT",  "0x2", "REG", "---", "REG B -> OUT"},
+                {"ADD",  "0x3", "---", "REG A-E", "A + B -> REG C"},
+                {"SUB",  "0x4", "---", "REG A-E", "A - B -> REG A"},
+                {"AND",  "0x5", "---", "REG A-E", "A AND B"},
+                {"NAND", "0x6", "---", "REG A-E", "A NAND B"},
+                {"OR",   "0x7", "---", "REG A-E", "A OR B"},
+                {"NOR",  "0x8", "---", "REG A-E", "A NOR B"},
+                {"XOR",  "0x9", "---", "REG A-E", "A XOR B"},
+                {"NOT",  "0xA", "REG", "REG", "NOT REG A"},
+                {"MOV",  "0xB", "REG", "REG", "REG A -> REG B"},
+                {"JUMP", "0xC", "---", "ADRES", "Jump 0x05"},
+                {"JZ",   "0xD", "---", "ADRES", "Jump if Zero"}
+        };
+
+        for (String[] row : data) {
+            HBox rowUI = new HBox(10,
+                    createTableCell(row[0], 100, false),
+                    createTableCell(row[1], 80, false),
+                    createTableCell(row[2], 120, false),
+                    createTableCell(row[3], 120, false),
+                    createTableCell(row[4], 200, false)
+            );
+            rowUI.setStyle("-fx-padding: 5; -fx-border-color: #333; -fx-border-width: 0 0 1 0;");
+            rowUI.setAlignment(Pos.CENTER_LEFT);
+            table.getChildren().add(rowUI);
+        }
+        return table;
+    }
+
+    private StackPane createTableCell(String val, double w, boolean header) {
+        Text t = new Text(val);
+        t.setFill(header ? Color.web("#3498db") : Color.WHITE);
+        t.setFont(Font.font("Consolas", header ? 13 : 12));
+        StackPane sp = new StackPane(t);
+        sp.setPrefWidth(w);
+        sp.setAlignment(Pos.CENTER_LEFT);
+        return sp;
     }
 
     private void navigate(int delta) {

@@ -98,7 +98,15 @@ public class LessonRepository {
                             "--- Dlaczego '----'? ---\n" +
                             "W instrukcji `ADD` źródło jest domyślne. Wynika to z budowy hardware'u: Adder jest na stałe wpięty między magistrale wejściowe. Nie trzeba mu mówić, co ma dodać – on dodaje wszystko, co 'widzi' na wejściach.\n\n" +
                             "Kliknij poniższe przyciski, aby zobaczyć jak instrukcje konfigurują procesor:\n\n" +
-                            "[INSTR:VIEW]")
+                            "[INSTR:VIEW]"),
+
+            new Lesson("Kod Maszynowy i Opcode",
+                    "Komputer nie rozumie słów takich jak ADD czy MOV. Każda instrukcja musi być zapisana jako liczba binarna, którą procesor potrafi rozpoznać. " +
+                            "Ten unikalny numer instrukcji nazywamy OPCODE.\n\n" +
+                            "Poniższa tabela przedstawia zestaw instrukcji (ISA) naszego procesora wraz z ich kodami binarnymi i argumentami:\n\n" +
+                            "[TABLE:ISA_OPCODES]\n\n" +
+                            "Spróbuj teraz samodzielnie pobawić się dekoderem. Zmieniaj bity OPCODE (4 bity po lewej), aby zobaczyć, jaką instrukcję rozpozna jednostka sterująca:\n\n" +
+                            "[OPCODE:DECODER]")
     );
 
     public static Lesson getLesson(int id) {
