@@ -119,7 +119,21 @@ public class LessonRepository {
                             "Dzięki temu, że mamy tylko 4 rejestry, wystarczą nam tylko 2 bity, aby wskazać dowolny z nich:\n\n" +
                             "[TABLE:REGISTERS_SHORT]\n\n" +
                             "Poniżej możesz przetestować, jak zmieniając bity, tworzysz gotowe polecenia dla procesora:\n\n" +
-                            "[COMPILER:MODULE]")
+                            "[COMPILER:MODULE]"),
+
+            new Lesson("Von Neumann vs Harvard",
+                    "Gdzie komputer trzyma instrukcje, które przed chwilą skompilowałeś? Istnieją dwa główne podejścia do budowy systemu pamięci:\n\n" +
+                            "### 1. Architektura Von Neumanna\n" +
+                            "To najpopularniejszy model. Zarówno **program (instrukcje)**, jak i **dane (zmienne)** znajdują się w tej samej pamięci RAM i podróżują tą samą magistralą.\n" +
+                            "* **Zaleta:** Elastyczność (można łatwo zmieniać rozmiar programu).\n" +
+                            "* **Wada:** 'Wąskie gardło' – procesor nie może jednocześnie czytać nowej instrukcji i zapisywać wyniku operacji do pamięci.\n\n" +
+                            "### 2. Architektura Harwardzka\n" +
+                            "Tutaj mamy dwie oddzielne pamięci i oddzielne magistrale dla instrukcji oraz danych.\n" +
+                            "* **Zaleta:** Szybkość – procesor może pobierać następną instrukcję *w tym samym czasie*, gdy pracuje na danych.\n" +
+                            "* **Wada:** Bardziej skomplikowana budowa fizyczna.\n\n" +
+                            "--- Interaktywne porównanie ---\n" +
+                            "Zobacz, jak przepływają informacje w obu systemach. Zwróć uwagę na ruch na magistralach (liniach):\n\n" +
+                            "[ARCH:COMPARISON]")
     );
 
     public static Lesson getLesson(int id) {
