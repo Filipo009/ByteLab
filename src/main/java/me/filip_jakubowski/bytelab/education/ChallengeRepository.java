@@ -53,10 +53,12 @@ public class ChallengeRepository {
                         "ADD ---- REGB\n" +
                         "MOV REGA REGD\n" +
                         "MOV REGC REGA\n" +
-                        "XOR REGB REG0\n" +
+                        "XOR ---- REG0\n" +
                         "JZ 0x0\n" +
                         "MOV REGD REGA\n" +
                         "ADD ---- REGB\n" +
+                        "MOV REGC REGA\n" +
+                        "XOR ---- REG0\n" +
                         "MOV REGC REGA\n" +
                         "XOR ---- REG0\n" +
                         "JZ 0x0"

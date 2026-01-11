@@ -53,7 +53,7 @@ public class TheoryPCAdvancedView extends VBox {
         programBox.setAlignment(Pos.CENTER);
         program.forEach(row -> programBox.getChildren().add(row.view));
 
-        Text title = new Text("SYMULACJA: DETEKCJA ZMIAN I LOGIKA ZEROWA");
+        Text title = new Text("Przykładowy program z JZ:");
         title.setFill(Color.WHITE);
         title.setFont(Font.font("System", FontWeight.BOLD, 20));
 

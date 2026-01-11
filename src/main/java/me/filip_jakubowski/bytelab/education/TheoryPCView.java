@@ -79,20 +79,24 @@ public class TheoryPCView extends VBox {
             programBox.getChildren().add(row.view);
         }
 
+        // Poprawiony tytuł
+        Text title = new Text("SYMULACJA LICZNIKA ROZKAZÓW (4-BIT PC)");
+        title.setFill(Color.WHITE);
+        title.setFont(Font.font("System", FontWeight.BOLD, 20));
+
         statusText.setFill(Color.web("#3498db"));
         statusText.setFont(Font.font("Consolas", 14));
 
-        getChildren().addAll(new Text("SYMULACJA LICZNIKA ROZKAZÓW (4-BIT PC)"), cpuPanel, programBox, controls, statusText);
+        getChildren().addAll(title, cpuPanel, programBox, controls, statusText);
         updateUI();
     }
 
     private void setupProgram() {
-        // PC 4-bitowy: adresy od 0000 do 1111
         program.add(new InstructionRow("0000", "IN 1, REGA", "1010 0001"));
         program.add(new InstructionRow("0001", "IN 2, REGB", "1010 0010"));
         program.add(new InstructionRow("0010", "ADD ---, REGB", "1100 0110"));
         program.add(new InstructionRow("0011", "OUT REGC", "1110 0011"));
-        program.add(new InstructionRow("0100", "HLT",      "0000 0000")); // Zatrzymanie procesora
+        program.add(new InstructionRow("0100", "HLT",      "0000 0000"));
     }
 
     private void step() {
@@ -131,7 +135,6 @@ public class TheoryPCView extends VBox {
     }
 
     private void updateUI() {
-        // Wyświetlanie adresu PC w formacie 4-bitowym
         if (pc < program.size()) {
             pcDisplay.setText("PC: " + program.get(pc).addr);
         } else {
