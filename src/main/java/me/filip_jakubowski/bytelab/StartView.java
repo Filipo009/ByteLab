@@ -44,6 +44,7 @@ public class StartView extends VBox {
         emulatorButton.setOnAction(e -> MainApp.getNavigationManager().showEmulator());
         educationButton.setOnAction(e -> MainApp.getNavigationManager().showEducationMenu());
         gameButton.setOnAction(e -> MainApp.getNavigationManager().showLogicGame());
+        gameButton.setOnAction(e -> MainApp.getNavigationManager().showLogicGameMenu());
 
         buttons.getChildren().addAll(educationButton, gameButton, emulatorButton);
         getChildren().addAll(header, buttons);

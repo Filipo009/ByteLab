@@ -6,6 +6,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import me.filip_jakubowski.bytelab.logicgame.LogicGameMenuView;
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
 import me.filip_jakubowski.bytelab.view.SimulationView;
 import me.filip_jakubowski.bytelab.view.DiagramView;
@@ -70,9 +71,16 @@ public class NavigationManager {
         switchRoot(mainContent, 1200, 800);
     }
 
+    public void showLogicGameMenu() {
+        LogicGameMenuView menuView = new LogicGameMenuView();
+        // Załóżmy, że masz metodę updateRoot lub setScene
+        stage.getScene().setRoot(menuView);
+    }
+
+    // Zmień dotychczasowe showLogicGame, aby faktycznie odpalało grę:
     public void showLogicGame() {
-        LogicGameView view = new LogicGameView();
-        switchRoot(view, 1000, 750);
+        LogicGameView gameView = new LogicGameView();
+        stage.getScene().setRoot(gameView);
     }
 
     /**
