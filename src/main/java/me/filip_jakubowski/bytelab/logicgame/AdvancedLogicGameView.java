@@ -2,6 +2,7 @@ package me.filip_jakubowski.bytelab.logicgame;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -21,32 +22,40 @@ public class AdvancedLogicGameView extends BorderPane {
     private boolean gameOver = false;
     private boolean isGreenTurn = true;
 
+    // Parametry siatki - stałe dla wszystkich metod
+    private final double slotSize = 130;
+    private final double gap = 80;
+    private final double spacing = 5;
+    private final double startCoord = 0;
+
     public AdvancedLogicGameView() {
-        setPadding(new Insets(10));
-        matrixLayer.setMouseTransparent(true);
+        setPadding(new Insets(20));
 
         // Panele boczne
         setLeft(createToolbox("BRAMKI", new String[]{"and", "or", "xor", "nand", "nor"}, true));
         setRight(createToolbox("PINY", new String[]{"1", "0"}, false));
 
-        StackPane gameStack = new StackPane();
-        gameStack.setAlignment(Pos.CENTER);
+        // Główny kontener gry
+        Group gameGroup = new Group();
 
-        // 1. Rysujemy siatkę gniazd (każde z 9-bitową magistralą)
+        // WAŻNE: matrixLayer NIE może być transparentny, bo kafelki są jego dziećmi.
+        // Ustawiamy tylko pickOnBounds na false, by puste miejsca nie kradły kliknięć.
+        matrixLayer.setPickOnBounds(false);
+
+        // 1. Rysujemy tło (magistrale)
         drawGridMatrix();
 
-        // 2. Rozmieszczamy kafelki i switche
-        GridPane componentGrid = new GridPane();
-        componentGrid.setAlignment(Pos.CENTER);
-        componentGrid.setHgap(40); // Odstęp między gniazdami
-        componentGrid.setVgap(40);
+        // 2. Dodajemy kafelki i switche do tej samej warstwy (będą nad magistralami)
+        setupComponents(matrixLayer);
 
-        setupComponents(componentGrid);
+        gameGroup.getChildren().add(matrixLayer);
 
-        gameStack.getChildren().addAll(matrixLayer, componentGrid);
+        StackPane centerContainer = new StackPane(gameGroup);
+        centerContainer.setAlignment(Pos.CENTER);
 
-        VBox centerArea = new VBox(15, statusLabel, gameStack);
+        VBox centerArea = new VBox(20, statusLabel, centerContainer);
         centerArea.setAlignment(Pos.CENTER);
+
         updateStatusStyle();
         setCenter(centerArea);
 
@@ -54,11 +63,6 @@ public class AdvancedLogicGameView extends BorderPane {
     }
 
     private void drawGridMatrix() {
-        double slotSize = 130;
-        double gap = 80;
-        double spacing = 5;
-        double startCoord = 120;
-
         double bundleWidth = 8 * spacing;
 
         // 1. LINIE POZIOME (H-Bus)
@@ -68,13 +72,11 @@ public class AdvancedLogicGameView extends BorderPane {
             for (int bit = 0; bit < 9; bit++) {
                 double y = bundleCenterY - (bundleWidth / 2) + (bit * spacing);
 
-                // Punkt startowy to X pierwszej pionowej wiązki dla tego bitu
                 double hStart = (startCoord + 0 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
-                // Punkt końcowy to X ostatniej (czwartej) pionowej wiązki dla tego bitu
                 double hEnd = (startCoord + 3 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
 
                 Line hLine = new Line(hStart, y, hEnd, y);
-                applyBusStyle(hLine, bit);
+                applyBusStyle(hLine, bit); // Tu ustawiamy przezroczystość dla myszy samej linii
                 matrixLayer.getChildren().add(hLine);
             }
         }
@@ -86,41 +88,32 @@ public class AdvancedLogicGameView extends BorderPane {
             for (int bit = 0; bit < 9; bit++) {
                 double x = bundleCenterX - (bundleWidth / 2) + (bit * spacing);
 
-                // Punkt startowy to Y pierwszej poziomej wiązki dla tego bitu
                 double vStart = (startCoord + 0 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
-                // Punkt końcowy to Y ostatniej poziomej wiązki dla tego bitu
                 double vEnd = (startCoord + 3 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
 
                 Line vLine = new Line(x, vStart, x, vEnd);
-                applyBusStyle(vLine, bit);
+                applyBusStyle(vLine, bit); // Tu ustawiamy przezroczystość dla myszy samej linii
                 matrixLayer.getChildren().add(vLine);
 
-                // 3. KROPKI (Na przecięciach tych samych bitów)
+                // 3. KROPKI
                 for (int hBundle = 0; hBundle < 4; hBundle++) {
                     double hCenterY = startCoord + (hBundle * (slotSize + gap)) - (gap / 2);
                     double hY = hCenterY - (bundleWidth / 2) + (bit * spacing);
 
                     Circle dot = new Circle(x, hY, 2.5);
-                    styleDot(dot, bit);
+                    styleDot(dot, bit); // Tu ustawiamy przezroczystość dla myszy samej kropki
                     matrixLayer.getChildren().add(dot);
                 }
             }
         }
     }
 
-    private void styleDot(Circle dot, int bitIdx) {
-        dot.setFill(Color.web("#333"));
-        busManager.addListener((idx, val) -> {
-            if (idx == bitIdx) {
-                dot.setFill(val == null ? Color.web("#333") :
-                        (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444")));
-            }
-        });
-    }
-
     private void applyBusStyle(Line line, int bitIdx) {
-        line.setStrokeWidth(1.5); // Cieńsze linie, by 9 zmieściło się estetycznie
+        line.setStrokeWidth(1.5);
         line.setStroke(Color.web("#333"));
+        // Sama linia nie powinna reagować na mysz, by nie blokować kafelków pod nią
+        line.setMouseTransparent(true);
+
         busManager.addListener((idx, val) -> {
             if (idx == bitIdx) {
                 line.setStroke(val == null ? Color.web("#333") :
@@ -129,26 +122,61 @@ public class AdvancedLogicGameView extends BorderPane {
         });
     }
 
-    private void setupComponents(GridPane grid) {
-        // Kafelki bramek wewnątrz gniazd
-        for (int r = 0; r < 3; r++) {
-            for (int c = 0; c < 3; c++) {
-                tiles[r][c] = new LogicTile(r, c, t -> onActionMade());
-                grid.add(tiles[r][c], c + 1, r + 1);
+    private void styleDot(Circle dot, int bitIdx) {
+        dot.setFill(Color.web("#333"));
+        // Kropka również ignoruje mysz
+        dot.setMouseTransparent(true);
+
+        busManager.addListener((idx, val) -> {
+            if (idx == bitIdx) {
+                dot.setFill(val == null ? Color.web("#333") :
+                        (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444")));
+            }
+        });
+    }
+
+    private void setupComponents(Pane parentPane) {
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                tiles[row][col] = new LogicTile(row, col, t -> onActionMade());
+
+                double x = startCoord + col * (slotSize + gap);
+                double y = startCoord + row * (slotSize + gap);
+
+                tiles[row][col].setLayoutX(x);
+                tiles[row][col].setLayoutY(y);
+
+                parentPane.getChildren().add(tiles[row][col]);
             }
         }
-        // Switche w krzyżu (Góra, Lewo, Prawo, Dół)
-        grid.add(createWorldSwitch(0), 2, 0);
-        grid.add(createWorldSwitch(1), 0, 2);
-        grid.add(createWorldSwitch(2), 4, 2);
-        grid.add(createWorldSwitch(3), 2, 4);
+        setupSwitches(parentPane, startCoord, slotSize, gap);
+    }
+
+    private void setupSwitches(Pane pane, double start, double size, double gap) {
+        double fullSize = 2 * (size + gap) + size;
+        double mid = start + (fullSize / 2) - 35;
+
+        VBox swTop = createWorldSwitch(0);
+        swTop.setLayoutX(mid); swTop.setLayoutY(start - gap - 40);
+
+        VBox swBottom = createWorldSwitch(3);
+        swBottom.setLayoutX(mid); swBottom.setLayoutY(start + fullSize + 30);
+
+        VBox swLeft = createWorldSwitch(1);
+        swLeft.setLayoutX(start - gap - 60); swLeft.setLayoutY(mid);
+
+        VBox swRight = createWorldSwitch(2);
+        swRight.setLayoutX(start + fullSize + 30); swRight.setLayoutY(mid);
+
+        pane.getChildren().addAll(swTop, swBottom, swLeft, swRight);
     }
 
     private VBox createWorldSwitch(int id) {
         VBox swBox = new VBox(2);
         swBox.setAlignment(Pos.CENTER);
         Button btn = new Button("SW " + id);
-        btn.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold;");
+        btn.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-font-weight: bold;");
+
         ComboBox<Integer> bitSel = new ComboBox<>();
         for(int i=0; i<9; i++) bitSel.getItems().add(i);
         bitSel.setPromptText("BIT");
@@ -160,7 +188,7 @@ public class AdvancedLogicGameView extends BorderPane {
                 Integer curr = busManager.getBusState(bit);
                 int next = (curr == null || curr == 0) ? 1 : 0;
                 busManager.setBusState(bit, next);
-                btn.setStyle("-fx-background-color: " + (next == 1 ? "#2ecc71" : "#ff4444") + "; -fx-text-fill: white;");
+                btn.setStyle("-fx-background-color: " + (next == 1 ? "#2ecc71" : "#ff4444") + "; -fx-text-fill: white; -fx-font-weight: bold;");
                 onActionMade();
             }
         });
@@ -168,15 +196,13 @@ public class AdvancedLogicGameView extends BorderPane {
         return swBox;
     }
 
-    // --- TOOLBOX I LOGIKA (createToolbox, checkWin, etc. jak wcześniej) ---
-
     private VBox createToolbox(String title, String[] items, boolean isGate) {
         VBox box = new VBox(15);
         box.setPadding(new Insets(15));
         box.setStyle("-fx-background-color: #252526; -fx-border-color: #333; -fx-border-radius: 5;");
         Label l = new Label(title);
         l.setStyle("-fx-text-fill: #007acc; -fx-font-weight: bold;");
-        box.getChildren().addAll(l);
+        box.getChildren().add(l);
         for (String item : items) {
             if (isGate) {
                 ImageView iv = createGateIcon(item);
@@ -218,7 +244,16 @@ public class AdvancedLogicGameView extends BorderPane {
         return iv;
     }
 
-    private void onActionMade() { if (!gameOver) { checkWin(); if (!gameOver) { isGreenTurn = !isGreenTurn; updateStatusStyle(); } } }
+    private void onActionMade() {
+        if (!gameOver) {
+            checkWin();
+            if (!gameOver) {
+                isGreenTurn = !isGreenTurn;
+                updateStatusStyle();
+            }
+        }
+    }
+
     private void updateStatusStyle() {
         statusLabel.setText("Tura: " + (isGreenTurn ? "ZIELONY" : "CZERWONY"));
         statusLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: " + (isGreenTurn ? "#2ecc71" : "#ff4444"));
@@ -250,7 +285,9 @@ public class AdvancedLogicGameView extends BorderPane {
         reset.setOnAction(e -> MainApp.getNavigationManager().showAdvancedLogicGame());
         Button back = new Button("Menu");
         back.setOnAction(e -> MainApp.getNavigationManager().showStartScreen());
-        HBox f = new HBox(20, reset, back); f.setAlignment(Pos.CENTER); f.setPadding(new Insets(20));
+        HBox f = new HBox(20, reset, back);
+        f.setAlignment(Pos.CENTER);
+        f.setPadding(new Insets(20));
         setBottom(f);
     }
 }
