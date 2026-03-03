@@ -128,8 +128,10 @@ public class LogicGameMenuView extends HBox {
                     "Musisz zarządzać dostępem do szyny, aby uniknąć konfliktów logicznych.");
 
             Button startBtn = createStartButton();
-            startBtn.setText("WKRÓTCE DOSTĘPNE");
-            startBtn.setDisable(true);
+// W LogicGameMenuView.java (wewnątrz loadGameInfo dla id == 1)
+            startBtn.setText("ROZPOCZNIJ GRĘ");
+            startBtn.setDisable(false); // Odblokowujemy!
+            startBtn.setOnAction(e -> MainApp.getNavigationManager().showAdvancedLogicGame());
             gameDescriptionBox.getChildren().add(startBtn);
         }
     }

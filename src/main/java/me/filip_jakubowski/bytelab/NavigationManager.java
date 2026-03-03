@@ -6,6 +6,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import me.filip_jakubowski.bytelab.logicgame.AdvancedLogicGameView;
 import me.filip_jakubowski.bytelab.logicgame.LogicGameMenuView;
 import me.filip_jakubowski.bytelab.view.CommandSearchView;
 import me.filip_jakubowski.bytelab.view.SimulationView;
@@ -82,6 +83,14 @@ public class NavigationManager {
         LogicGameView gameView = new LogicGameView();
         stage.getScene().setRoot(gameView);
     }
+
+
+    public void showAdvancedLogicGame() {
+        AdvancedLogicGameView advancedView = new AdvancedLogicGameView();
+        // Ustawiamy nową scenę lub root
+        stage.getScene().setRoot(advancedView);
+    }
+
 
     /**
      * Otwiera schemat architektury komputera w osobnym oknie systemowym.
