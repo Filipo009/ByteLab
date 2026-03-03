@@ -11,7 +11,14 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Polyline;
 import me.filip_jakubowski.bytelab.MainApp;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class AdvancedLogicGameView extends BorderPane {
 
@@ -19,233 +26,284 @@ public class AdvancedLogicGameView extends BorderPane {
     private final Label statusLabel = new Label();
     private final BusManager busManager = new BusManager();
     private final Pane matrixLayer = new Pane();
+    private final Pane connectionLayer = new Pane();
+
     private boolean gameOver = false;
     private boolean isGreenTurn = true;
 
-    // Parametry siatki - stałe dla wszystkich metod
-    private final double slotSize = 130;
-    private final double gap = 80;
-    private final double spacing = 5;
-    private final double startCoord = 0;
+    private final double slotSize = 140;
+    private final double gap = 120;
+    private final double spacing = 10;
+    private final double startCoord = 60;
+
+    private final Map<LogicTile, Integer> tileToBit = new HashMap<>();
+    private final Set<Integer> occupiedBusBits = new HashSet<>();
 
     public AdvancedLogicGameView() {
-        setPadding(new Insets(20));
+        setPadding(new Insets(10));
+        setStyle("-fx-background-color: #1e1e1e;");
 
-        // Panele boczne
-        setLeft(createToolbox("BRAMKI", new String[]{"and", "or", "xor", "nand", "nor"}, true));
-        setRight(createToolbox("PINY", new String[]{"1", "0"}, false));
+        setLeft(createToolbox("BRAMKI LOGICZNE", new String[]{"and", "or", "xor", "nand", "nor"}, true));
 
-        // Główny kontener gry
+        VBox rightSidebar = new VBox(20);
+        rightSidebar.getChildren().addAll(createInputControlPanel(), createToolbox("WARTOŚCI", new String[]{"1", "0"}, false));
+        setRight(rightSidebar);
+
         Group gameGroup = new Group();
-
-        // WAŻNE: matrixLayer NIE może być transparentny, bo kafelki są jego dziećmi.
-        // Ustawiamy tylko pickOnBounds na false, by puste miejsca nie kradły kliknięć.
         matrixLayer.setPickOnBounds(false);
+        connectionLayer.setPickOnBounds(false);
 
-        // 1. Rysujemy tło (magistrale)
         drawGridMatrix();
-
-        // 2. Dodajemy kafelki i switche do tej samej warstwy (będą nad magistralami)
         setupComponents(matrixLayer);
 
-        gameGroup.getChildren().add(matrixLayer);
+        gameGroup.getChildren().addAll(matrixLayer, connectionLayer);
 
         StackPane centerContainer = new StackPane(gameGroup);
         centerContainer.setAlignment(Pos.CENTER);
+        centerContainer.setPadding(new Insets(50));
+        centerContainer.setStyle("-fx-background-color: #1e1e1e;");
 
-        VBox centerArea = new VBox(20, statusLabel, centerContainer);
+        // ScrollPane rozwiązuje problem znikania przycisków na małych ekranach
+        ScrollPane scrollPane = new ScrollPane(centerContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setStyle("-fx-background: #1e1e1e; -fx-border-color: #1e1e1e;");
+
+        VBox centerArea = new VBox(10, statusLabel, scrollPane);
         centerArea.setAlignment(Pos.CENTER);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
         updateStatusStyle();
         setCenter(centerArea);
-
-        setupFooter();
+        setupFooter(); // Teraz na pewno będzie widoczne na dole BorderPane
     }
 
     private void drawGridMatrix() {
         double bundleWidth = 8 * spacing;
-
-        // 1. LINIE POZIOME (H-Bus)
-        for (int bundle = 0; bundle < 4; bundle++) {
-            double bundleCenterY = startCoord + (bundle * (slotSize + gap)) - (gap / 2);
-
-            for (int bit = 0; bit < 9; bit++) {
-                double y = bundleCenterY - (bundleWidth / 2) + (bit * spacing);
-
-                double hStart = (startCoord + 0 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
-                double hEnd = (startCoord + 3 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
-
-                Line hLine = new Line(hStart, y, hEnd, y);
-                applyBusStyle(hLine, bit); // Tu ustawiamy przezroczystość dla myszy samej linii
-                matrixLayer.getChildren().add(hLine);
-            }
+        double[] nodeCoords = new double[4];
+        for (int i = 0; i < 4; i++) {
+            nodeCoords[i] = startCoord + (i * (slotSize + gap)) - (gap / 2);
         }
 
-        // 2. LINIE PIONOWE (V-Bus)
-        for (int bundle = 0; bundle < 4; bundle++) {
-            double bundleCenterX = startCoord + (bundle * (slotSize + gap)) - (gap / 2);
+        // rangeStart i rangeEnd teraz kończą się równo z ostatnią linią bitu
+        double rangeStart = nodeCoords[0] - (bundleWidth / 2);
+        double rangeEnd = nodeCoords[3] + (bundleWidth / 2);
 
+        for (int bundleIdx = 0; bundleIdx < 4; bundleIdx++) {
+            double bundlePos = nodeCoords[bundleIdx];
             for (int bit = 0; bit < 9; bit++) {
-                double x = bundleCenterX - (bundleWidth / 2) + (bit * spacing);
+                double offset = bundlePos - (bundleWidth / 2) + ((8 - bit) * spacing);
 
-                double vStart = (startCoord + 0 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
-                double vEnd = (startCoord + 3 * (slotSize + gap) - gap/2) - (bundleWidth/2) + (bit * spacing);
+                // Linie magistrali (przycięte do krawędzi)
+                Line hLine = new Line(rangeStart, offset, rangeEnd, offset);
+                Line vLine = new Line(offset, rangeStart, offset, rangeEnd);
 
-                Line vLine = new Line(x, vStart, x, vEnd);
-                applyBusStyle(vLine, bit); // Tu ustawiamy przezroczystość dla myszy samej linii
-                matrixLayer.getChildren().add(vLine);
+                setupBusSource(hLine, bit);
+                setupBusSource(vLine, bit);
+                setupBusInteractions(hLine, bit);
+                setupBusInteractions(vLine, bit);
+                applyBusStyle(hLine, bit);
+                applyBusStyle(vLine, bit);
 
-                // 3. KROPKI
-                for (int hBundle = 0; hBundle < 4; hBundle++) {
-                    double hCenterY = startCoord + (hBundle * (slotSize + gap)) - (gap / 2);
-                    double hY = hCenterY - (bundleWidth / 2) + (bit * spacing);
+                matrixLayer.getChildren().addAll(hLine, vLine);
 
-                    Circle dot = new Circle(x, hY, 2.5);
-                    styleDot(dot, bit); // Tu ustawiamy przezroczystość dla myszy samej kropki
+                for (int targetBundle = 0; targetBundle < 4; targetBundle++) {
+                    double crossY = nodeCoords[targetBundle] - (bundleWidth / 2) + ((8 - bit) * spacing);
+                    Circle dot = new Circle(offset, crossY, 2.5);
+                    styleDot(dot, bit);
                     matrixLayer.getChildren().add(dot);
                 }
             }
         }
     }
 
-    private void applyBusStyle(Line line, int bitIdx) {
-        line.setStrokeWidth(1.5);
-        line.setStroke(Color.web("#333"));
-        // Sama linia nie powinna reagować na mysz, by nie blokować kafelków pod nią
-        line.setMouseTransparent(true);
+    private void setupFooter() {
+        Button btnReset = new Button("RESETUJ GRĘ");
+        btnReset.setPrefWidth(150);
+        btnReset.setStyle("-fx-background-color: #007acc; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10; -fx-cursor: hand;");
+        btnReset.setOnAction(e -> MainApp.getNavigationManager().showAdvancedLogicGame());
 
-        busManager.addListener((idx, val) -> {
-            if (idx == bitIdx) {
-                line.setStroke(val == null ? Color.web("#333") :
-                        (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444")));
-            }
-        });
+        Button btnMenu = new Button("MENU");
+        btnMenu.setPrefWidth(150);
+        btnMenu.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10; -fx-cursor: hand;");
+        btnMenu.setOnAction(e -> MainApp.getNavigationManager().showStartScreen());
+
+        HBox footer = new HBox(30, btnReset, btnMenu);
+        footer.setAlignment(Pos.CENTER);
+        footer.setPadding(new Insets(15));
+        footer.setStyle("-fx-background-color: #252526; -fx-border-color: #444; -fx-border-width: 1 0 0 0;");
+
+        this.setBottom(footer);
     }
 
-    private void styleDot(Circle dot, int bitIdx) {
-        dot.setFill(Color.web("#333"));
-        // Kropka również ignoruje mysz
-        dot.setMouseTransparent(true);
+    // --- Reszta metod Drag & Drop oraz Logiki (bez zmian w logice) ---
 
-        busManager.addListener((idx, val) -> {
-            if (idx == bitIdx) {
-                dot.setFill(val == null ? Color.web("#333") :
-                        (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444")));
-            }
+    private void setupBusSource(Line line, int bitIdx) {
+        line.setOnDragDetected(e -> {
+            Dragboard db = line.startDragAndDrop(TransferMode.COPY);
+            ClipboardContent content = new ClipboardContent();
+            content.putString("BUS_BIT:" + bitIdx);
+            db.setContent(content);
+            e.consume();
         });
     }
 
     private void setupComponents(Pane parentPane) {
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                tiles[row][col] = new LogicTile(row, col, t -> onActionMade());
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                LogicTile tile = new LogicTile(r, c, t -> onActionMade());
+                tiles[r][c] = tile;
+                tile.setLayoutX(startCoord + c * (slotSize + gap));
+                tile.setLayoutY(startCoord + r * (slotSize + gap));
 
-                double x = startCoord + col * (slotSize + gap);
-                double y = startCoord + row * (slotSize + gap);
+                tile.setOnDragOver(e -> {
+                    Dragboard db = e.getDragboard();
+                    if (db.hasString()) {
+                        String data = db.getString();
+                        if (data.startsWith("GATE:") && tile.getGateType() == null) {
+                            e.acceptTransferModes(TransferMode.COPY);
+                        } else if ((data.startsWith("BUS_BIT:") || data.startsWith("PIN:")) && tile.getGateType() != null) {
+                            e.acceptTransferModes(TransferMode.ANY);
+                        }
+                    }
+                    e.consume();
+                });
 
-                tiles[row][col].setLayoutX(x);
-                tiles[row][col].setLayoutY(y);
+                tile.setOnDragDropped(e -> {
+                    Dragboard db = e.getDragboard();
+                    if (db.hasString()) {
+                        String data = db.getString();
+                        boolean actionDone = false;
+                        if (data.startsWith("GATE:")) {
+                            tile.setGateType(data.split(":")[1]);
+                            String path = "/me/filip_jakubowski/bytelab/" + data.split(":")[1] + ".png";
+                            InputStream is = getClass().getResourceAsStream(path);
+                            if (is != null) tile.getGateView().setImage(new Image(is));
+                            actionDone = true;
+                        } else if (data.startsWith("BUS_BIT:")) {
+                            int bitIdx = Integer.parseInt(data.split(":")[1]);
+                            connectBusToTileInput(tile, bitIdx);
+                            actionDone = true;
+                        } else if (data.startsWith("PIN:")) {
+                            String val = data.split(":")[1];
+                            if (!tile.isInputAOccupied()) {
+                                tile.setInputAOccupied(true);
+                                tile.setInputA(val);
+                                actionDone = true;
+                            } else if (!tile.isInputBOccupied()) {
+                                tile.setInputBOccupied(true);
+                                tile.setInputB(val);
+                                actionDone = true;
+                            }
+                        }
+                        if (actionDone) onActionMade();
+                        e.setDropCompleted(true);
+                    }
+                    e.consume();
+                });
 
-                parentPane.getChildren().add(tiles[row][col]);
+                tile.setOnDragDetected(e -> {
+                    if (!tile.isConnectedToBus() && tile.getSymbol() != null && !tile.getSymbol().isEmpty()) {
+                        Dragboard db = tile.startDragAndDrop(TransferMode.LINK);
+                        ClipboardContent content = new ClipboardContent();
+                        content.putString("OUT:" + tile.getRow() + ":" + tile.getCol());
+                        db.setContent(content);
+                    }
+                    e.consume();
+                });
+                parentPane.getChildren().add(tile);
             }
         }
-        setupSwitches(parentPane, startCoord, slotSize, gap);
     }
 
-    private void setupSwitches(Pane pane, double start, double size, double gap) {
-        double fullSize = 2 * (size + gap) + size;
-        double mid = start + (fullSize / 2) - 35;
+    private void connectBusToTileInput(LogicTile tile, int bitIdx) {
+        Integer val = busManager.getBusState(bitIdx);
+        String stringVal = (val == null) ? null : String.valueOf(val);
 
-        VBox swTop = createWorldSwitch(0);
-        swTop.setLayoutX(mid); swTop.setLayoutY(start - gap - 40);
+        if (!tile.isInputAOccupied()) {
+            tile.setInputAOccupied(true);
+            tile.setInputA(stringVal);
+            createInputWire(tile, bitIdx, true);
+        } else if (!tile.isInputBOccupied()) {
+            tile.setInputBOccupied(true);
+            tile.setInputB(stringVal);
+            createInputWire(tile, bitIdx, false);
+        } else return;
 
-        VBox swBottom = createWorldSwitch(3);
-        swBottom.setLayoutX(mid); swBottom.setLayoutY(start + fullSize + 30);
-
-        VBox swLeft = createWorldSwitch(1);
-        swLeft.setLayoutX(start - gap - 60); swLeft.setLayoutY(mid);
-
-        VBox swRight = createWorldSwitch(2);
-        swRight.setLayoutX(start + fullSize + 30); swRight.setLayoutY(mid);
-
-        pane.getChildren().addAll(swTop, swBottom, swLeft, swRight);
+        onActionMade();
     }
 
-    private VBox createWorldSwitch(int id) {
-        VBox swBox = new VBox(2);
-        swBox.setAlignment(Pos.CENTER);
-        Button btn = new Button("SW " + id);
-        btn.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-font-weight: bold;");
+    private void createInputWire(LogicTile tile, int bitIdx, boolean isTopPin) {
+        double endX = tile.getLayoutX();
+        double endY = tile.getLayoutY() + (isTopPin ? slotSize * 0.3 : slotSize * 0.7);
+        double bundleWidth = 8 * spacing;
+        double startX = -1;
 
-        ComboBox<Integer> bitSel = new ComboBox<>();
-        for(int i=0; i<9; i++) bitSel.getItems().add(i);
-        bitSel.setPromptText("BIT");
-        bitSel.setPrefWidth(70);
-
-        btn.setOnAction(e -> {
-            Integer bit = bitSel.getValue();
-            if (bit != null && !gameOver) {
-                Integer curr = busManager.getBusState(bit);
-                int next = (curr == null || curr == 0) ? 1 : 0;
-                busManager.setBusState(bit, next);
-                btn.setStyle("-fx-background-color: " + (next == 1 ? "#2ecc71" : "#ff4444") + "; -fx-text-fill: white; -fx-font-weight: bold;");
-                onActionMade();
-            }
-        });
-        swBox.getChildren().addAll(btn, bitSel);
-        return swBox;
-    }
-
-    private VBox createToolbox(String title, String[] items, boolean isGate) {
-        VBox box = new VBox(15);
-        box.setPadding(new Insets(15));
-        box.setStyle("-fx-background-color: #252526; -fx-border-color: #333; -fx-border-radius: 5;");
-        Label l = new Label(title);
-        l.setStyle("-fx-text-fill: #007acc; -fx-font-weight: bold;");
-        box.getChildren().add(l);
-        for (String item : items) {
-            if (isGate) {
-                ImageView iv = createGateIcon(item);
-                if (iv != null) box.getChildren().add(iv);
-            } else {
-                box.getChildren().add(createPinIcon(item));
-            }
+        for (int i = 3; i >= 0; i--) {
+            double bundlePos = startCoord + (i * (slotSize + gap)) - (gap / 2);
+            double busX = bundlePos - (bundleWidth / 2) + ((8 - bitIdx) * spacing);
+            if (busX < endX) { startX = busX; break; }
         }
-        return box;
+        if (startX == -1) startX = endX - 30;
+
+        Polyline wire = new Polyline(startX, endY, endX, endY);
+        wire.setStrokeWidth(3.0);
+        Circle jointDot = new Circle(startX, endY, 4);
+        Group inputGroup = new Group(wire, jointDot);
+
+        busManager.addListener((idx, val) -> {
+            if (idx == bitIdx) {
+                Color c = (val == null) ? Color.web("#333") : (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444"));
+                wire.setStroke(c);
+                jointDot.setFill(c);
+                String sVal = (val == null) ? null : String.valueOf(val);
+                if (isTopPin) tile.setInputA(sVal); else tile.setInputB(sVal);
+            }
+        });
+        connectionLayer.getChildren().add(inputGroup);
     }
 
-    private Button createPinIcon(String val) {
-        Button btn = new Button(val);
-        btn.setPrefSize(50, 50);
-        btn.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white; -fx-background-color: " + (val.equals("1") ? "#27ae60" : "#c0392b"));
-        btn.setOnDragDetected(e -> {
-            Dragboard db = btn.startDragAndDrop(TransferMode.COPY);
-            ClipboardContent content = new ClipboardContent();
-            content.putString("PIN:" + val);
-            db.setContent(content);
-            e.consume();
+    private void createConnection(LogicTile tile, int bitIdx) {
+        double startX = tile.getLayoutX() + slotSize;
+        double startY = tile.getLayoutY() + (slotSize / 2);
+        double bundleWidth = 8 * spacing;
+        double targetX = -1;
+
+        for (int i = 0; i < 4; i++) {
+            double bundlePos = startCoord + (i * (slotSize + gap)) - (gap / 2);
+            double busX = bundlePos - (bundleWidth / 2) + ((8 - bitIdx) * spacing);
+            if (busX > startX) { targetX = busX; break; }
+        }
+        if (targetX == -1) targetX = startX + 40;
+
+        Polyline wire = new Polyline(startX, startY, targetX, startY);
+        wire.setStrokeWidth(4.0);
+        Circle jointDot = new Circle(targetX, startY, 4.5);
+        tileToBit.put(tile, bitIdx);
+
+        busManager.addListener((idx, val) -> {
+            if (idx == bitIdx) {
+                Color c = (val == null) ? Color.web("#333") : (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444"));
+                wire.setStroke(c);
+                jointDot.setFill(c);
+            }
         });
-        return btn;
+        connectionLayer.getChildren().add(new Group(wire, jointDot));
+        refreshLogicNetwork();
     }
 
-    private ImageView createGateIcon(String type) {
-        String path = "/me/filip_jakubowski/bytelab/" + type + ".png";
-        java.io.InputStream is = getClass().getResourceAsStream(path);
-        if (is == null) return null;
-        ImageView iv = new ImageView(new Image(is));
-        iv.setFitWidth(80); iv.setPreserveRatio(true); iv.setStyle("-fx-cursor: hand;");
-        iv.setOnDragDetected(e -> {
-            Dragboard db = iv.startDragAndDrop(TransferMode.COPY);
-            ClipboardContent content = new ClipboardContent();
-            content.putString("GATE:" + type);
-            db.setContent(content);
-            e.consume();
+    private void refreshLogicNetwork() {
+        tileToBit.forEach((tile, bitIdx) -> {
+            String sym = tile.getSymbol();
+            if (sym != null && !sym.isEmpty()) {
+                busManager.setBusState(bitIdx, sym.equals("1") ? 1 : 0);
+            }
         });
-        return iv;
     }
 
     private void onActionMade() {
         if (!gameOver) {
+            refreshLogicNetwork();
             checkWin();
             if (!gameOver) {
                 isGreenTurn = !isGreenTurn;
@@ -254,9 +312,88 @@ public class AdvancedLogicGameView extends BorderPane {
         }
     }
 
+    private void setupBusInteractions(Line line, int bitIdx) {
+        line.setPickOnBounds(true);
+        line.setOnDragOver(e -> {
+            Dragboard db = e.getDragboard();
+            if (db.hasString() && db.getString().startsWith("OUT:")) {
+                if (bitIdx > 3 && !occupiedBusBits.contains(bitIdx)) e.acceptTransferModes(TransferMode.LINK);
+            }
+            e.consume();
+        });
+        line.setOnDragDropped(e -> {
+            Dragboard db = e.getDragboard();
+            if (db.hasString() && db.getString().startsWith("OUT:")) {
+                String[] p = db.getString().split(":");
+                LogicTile tile = tiles[Integer.parseInt(p[1])][Integer.parseInt(p[2])];
+                if (!tile.isConnectedToBus() && !occupiedBusBits.contains(bitIdx)) {
+                    createConnection(tile, bitIdx);
+                    tile.setConnectedToBus(true);
+                    occupiedBusBits.add(bitIdx);
+                    e.setDropCompleted(true);
+                }
+            }
+            e.consume();
+        });
+    }
+
+    private void applyBusStyle(Line line, int bitIdx) {
+        line.setStrokeWidth(2.5); line.setStroke(Color.web("#333"));
+        busManager.addListener((idx, val) -> {
+            if (idx == bitIdx) line.setStroke(val == null ? Color.web("#333") : (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444")));
+        });
+    }
+
+    private void styleDot(Circle dot, int bitIdx) {
+        dot.setFill(Color.web("#333"));
+        busManager.addListener((idx, val) -> {
+            if (idx == bitIdx) dot.setFill(val == null ? Color.web("#333") : (val == 1 ? Color.web("#2ecc71") : Color.web("#ff4444")));
+        });
+    }
+
+    private VBox createInputControlPanel() {
+        VBox panel = new VBox(10); panel.setPadding(new Insets(10));
+        panel.setStyle("-fx-background-color: #252526; -fx-border-color: #444; -fx-border-radius: 5;");
+        Label title = new Label("KONTROLA WEJŚĆ (0-3)");
+        title.setStyle("-fx-text-fill: #007acc; -fx-font-weight: bold;");
+        panel.getChildren().add(title);
+        for (int i = 0; i < 4; i++) {
+            final int bitIdx = i;
+            HBox row = new HBox(8); row.setAlignment(Pos.CENTER_LEFT);
+            Label lbl = new Label("BIT " + i); lbl.setStyle("-fx-text-fill: #aaa; -fx-min-width: 35;");
+            Button b0 = new Button("0"); b0.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white;");
+            Button b1 = new Button("1"); b1.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
+            b0.setOnAction(e -> handleBusAction(bitIdx, 0));
+            b1.setOnAction(e -> handleBusAction(bitIdx, 1));
+            row.getChildren().addAll(lbl, b0, b1);
+            panel.getChildren().add(row);
+        }
+        return panel;
+    }
+
+    private VBox createToolbox(String title, String[] items, boolean isGate) {
+        VBox box = new VBox(10); box.setPadding(new Insets(15));
+        box.setStyle("-fx-background-color: #252526; -fx-border-color: #333; -fx-border-radius: 5;");
+        Label l = new Label(title); l.setStyle("-fx-text-fill: #007acc; -fx-font-weight: bold;");
+        box.getChildren().add(l);
+        for (String item : items) {
+            if (isGate) box.getChildren().add(createGateIcon(item));
+            else box.getChildren().add(createPinIcon(item));
+        }
+        return box;
+    }
+
+    private void handleBusAction(int bitIdx, int value) {
+        if (!gameOver) {
+            busManager.setBusState(bitIdx, value);
+            refreshLogicNetwork();
+            onActionMade();
+        }
+    }
+
     private void updateStatusStyle() {
         statusLabel.setText("Tura: " + (isGreenTurn ? "ZIELONY" : "CZERWONY"));
-        statusLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: " + (isGreenTurn ? "#2ecc71" : "#ff4444"));
+        statusLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + (isGreenTurn ? "#2ecc71" : "#ff4444"));
     }
 
     private void checkWin() {
@@ -270,8 +407,9 @@ public class AdvancedLogicGameView extends BorderPane {
 
         if (winner != null && !winner.isEmpty()) {
             gameOver = true;
-            statusLabel.setText("WYGRANA: " + (winner.equals("1") ? "ZIELONY" : "CZERWONY"));
-            statusLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: " + (winner.equals("1") ? "#2ecc71" : "#ff4444"));
+            boolean isOne = winner.equals("1");
+            statusLabel.setText("WYGRANA: " + (isOne ? "JEDYNKI (ZIELONY)" : "ZERA (CZERWONY)"));
+            statusLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: " + (isOne ? "#2ecc71" : "#ff4444"));
         }
     }
 
@@ -280,14 +418,26 @@ public class AdvancedLogicGameView extends BorderPane {
         return s1 != null && !s1.isEmpty() && s1.equals(t2.getSymbol()) && s1.equals(t3.getSymbol());
     }
 
-    private void setupFooter() {
-        Button reset = new Button("Resetuj Grę");
-        reset.setOnAction(e -> MainApp.getNavigationManager().showAdvancedLogicGame());
-        Button back = new Button("Menu");
-        back.setOnAction(e -> MainApp.getNavigationManager().showStartScreen());
-        HBox f = new HBox(20, reset, back);
-        f.setAlignment(Pos.CENTER);
-        f.setPadding(new Insets(20));
-        setBottom(f);
+    private Button createPinIcon(String val) {
+        Button btn = new Button(val); btn.setPrefSize(45, 45);
+        btn.setStyle("-fx-font-weight: bold; -fx-text-fill: white; -fx-background-color: " + (val.equals("1") ? "#27ae60" : "#c0392b"));
+        btn.setOnDragDetected(e -> {
+            Dragboard db = btn.startDragAndDrop(TransferMode.COPY);
+            ClipboardContent c = new ClipboardContent(); c.putString("PIN:" + val); db.setContent(c);
+            e.consume();
+        });
+        return btn;
+    }
+
+    private ImageView createGateIcon(String type) {
+        String path = "/me/filip_jakubowski/bytelab/" + type + ".png";
+        ImageView iv = new ImageView(new Image(getClass().getResourceAsStream(path)));
+        iv.setFitWidth(60); iv.setPreserveRatio(true);
+        iv.setOnDragDetected(e -> {
+            Dragboard db = iv.startDragAndDrop(TransferMode.COPY);
+            ClipboardContent c = new ClipboardContent(); c.putString("GATE:" + type); db.setContent(c);
+            e.consume();
+        });
+        return iv;
     }
 }
